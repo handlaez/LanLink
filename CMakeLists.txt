@@ -6,11 +6,12 @@ set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
 # include
 include_directories(${CMAKE_CURRENT_SOURCE_DIR}/include)
+include_directories(${CMAKE_CURRENT_SOURCE_DIR}/third_party)
 
 # src
 set(SOURCES
     src/main.cpp
-    src/WinDuplicationGrabber.cpp)
+    src/WinDuplicationGrabber.cpp "src/stb_image_implementation.cpp")
 
 set(HEADERS
     src/IFrameGrabber.hpp

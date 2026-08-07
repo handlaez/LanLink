@@ -68,7 +68,17 @@ bool WinDuplicationGrabber::CaptureFrame(FrameData& outFrame)
 
 	HRESULT hr = duplication_->AcquireNextFrame(1000, &frameInfo, &resource);
 
+	if (frameInfo.LastPresentTime.QuadPart == 0) {
+		duplication_->ReleaseFrame();
+		return false;
+	}
+
+	if (frameInfo.ProtectedContentMaskedOut) {
+		std::cout << "DRM detected -> captured screen might be black.\n";
+	}
+
 	if (hr == DXGI_ERROR_WAIT_TIMEOUT) return false;
+
 	if (FAILED(hr)) {
 		std::cerr << "AcquireNextFrame failed\n";
 		return false;
@@ -87,6 +97,8 @@ bool WinDuplicationGrabber::CaptureFrame(FrameData& outFrame)
 	outFrame.nativeTextureHandle = acquiredTexture_.Get();
 	outFrame.width = desc.Width;
 	outFrame.height = desc.Height;
+
+	return true;
 }
 
 void WinDuplicationGrabber::ReleaseFrame()
@@ -95,5 +107,15 @@ void WinDuplicationGrabber::ReleaseFrame()
 
 	if (duplication_)
 		duplication_->ReleaseFrame();
+}
+
+Microsoft::WRL::ComPtr<ID3D11Device>& WinDuplicationGrabber::getDevice()
+{
+	return device_;
+}
+
+Microsoft::WRL::ComPtr<ID3D11DeviceContext>& WinDuplicationGrabber::getContext()
+{
+	return context_;
 }
 
