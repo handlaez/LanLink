@@ -13,8 +13,8 @@ public:
 	bool CaptureFrame(FrameData& outFrame) override;
 	void ReleaseFrame() override;
 
-	Microsoft::WRL::ComPtr<ID3D11Device> &getDevice();
-	Microsoft::WRL::ComPtr<ID3D11DeviceContext> &getContext();
+	ID3D11Device* getDevice() const;
+	ID3D11DeviceContext* getContext() const;
 
 private:
 	Microsoft::WRL::ComPtr<ID3D11Device> device_;

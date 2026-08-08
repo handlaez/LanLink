@@ -11,16 +11,21 @@ include_directories(${CMAKE_CURRENT_SOURCE_DIR}/third_party)
 # src
 set(SOURCES
     src/main.cpp
-    src/WinDuplicationGrabber.cpp "src/stb_image_implementation.cpp")
+    src/WinDuplicationGrabber.cpp
+    src/stb_image_implementation.cpp
+    src/WinFrameConverter.cpp)
 
 set(HEADERS
     src/IFrameGrabber.hpp
+    src/IFrameConverter.hpp
     src/IVideoEncoder.hpp
+    src/WinFrameConverter.hpp
+    src/WinDuplicationGrabber.hpp
 )
 
 add_executable(${PROJECT_NAME} ${SOURCES} ${HEADERS})
 
-# native WinSDK system libraries
+# native WinSDK libraries
 target_link_libraries(${PROJECT_NAME} PRIVATE
     d3d11.lib
     dxgi.lib

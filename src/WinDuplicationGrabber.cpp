@@ -109,13 +109,12 @@ void WinDuplicationGrabber::ReleaseFrame()
 		duplication_->ReleaseFrame();
 }
 
-Microsoft::WRL::ComPtr<ID3D11Device>& WinDuplicationGrabber::getDevice()
+ID3D11Device* WinDuplicationGrabber::getDevice() const
 {
-	return device_;
+	return device_.Get();
 }
 
-Microsoft::WRL::ComPtr<ID3D11DeviceContext>& WinDuplicationGrabber::getContext()
+ID3D11DeviceContext* WinDuplicationGrabber::getContext() const
 {
-	return context_;
+	return context_.Get();
 }
-

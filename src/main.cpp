@@ -1,7 +1,9 @@
 #include <iostream>
 #include <filesystem>
+#include <fstream>
 
 #include "WinDuplicationGrabber.hpp"
+#include "WinFrameConverter.hpp"
 #include "stb_image_write.h"
 
 int main()
@@ -29,78 +31,88 @@ int main()
         return 1;
     }
 
-    auto* texture = static_cast<ID3D11Texture2D*>(frame.nativeTextureHandle);
+    auto* bgraTexture = static_cast<ID3D11Texture2D*>(frame.nativeTextureHandle);
 
     D3D11_TEXTURE2D_DESC desc{};
-    texture->GetDesc(&desc);
+    bgraTexture->GetDesc(&desc);
 
     std::cout << "Width: " << desc.Width << " Height: " << desc.Height << " Format: " << desc.Format << ".\n";
 
-    D3D11_TEXTURE2D_DESC stagingDesc{};
-    stagingDesc.Width = desc.Width;
-    stagingDesc.Height = desc.Height;
-    stagingDesc.MipLevels = 1;
-    stagingDesc.ArraySize = 1;
-    stagingDesc.Format = desc.Format; // DXGI_FORMAT_B8G8R8A8_UNORM
-    stagingDesc.SampleDesc.Count = 1;
-    stagingDesc.Usage = D3D11_USAGE_STAGING;
-    stagingDesc.CPUAccessFlags = D3D11_CPU_ACCESS_READ;
-    stagingDesc.BindFlags = 0;
-    stagingDesc.MiscFlags = 0;
+    D3D11_TEXTURE2D_DESC nv12Desc{};
+    nv12Desc.Width = desc.Width;
+    nv12Desc.Height = desc.Height;
+    nv12Desc.MipLevels = 1;
+    nv12Desc.ArraySize = 1;
+    nv12Desc.Format = DXGI_FORMAT_NV12;
+    nv12Desc.SampleDesc.Count = 1;
+    nv12Desc.Usage = D3D11_USAGE_DEFAULT;
+    nv12Desc.BindFlags = D3D11_BIND_UNORDERED_ACCESS | D3D11_BIND_SHADER_RESOURCE;
 
-    Microsoft::WRL::ComPtr<ID3D11Texture2D> staging;
+    Microsoft::WRL::ComPtr<ID3D11Texture2D> outputNv12;
 
-    HRESULT hr = grabber.getDevice()->CreateTexture2D(&stagingDesc, nullptr, &staging);
-
+    HRESULT hr = grabber.getDevice()->CreateTexture2D(&nv12Desc, nullptr, &outputNv12);
     if (FAILED(hr)) {
-        std::cerr << "Failed to create staging texture.\n";
+        std::cerr << "Failed to create GPU NV12 texture.\n";
         grabber.ReleaseFrame();
         return 1;
     }
 
-    grabber.getContext()->CopyResource(staging.Get(), texture);
+    WinFrameConverter converter(grabber.getDevice(), grabber.getContext());
+    if (!converter.Initialize(desc.Width, desc.Height)) {
+        std::cerr << "Failed to initialize GPU comp shader.\n";
+        grabber.ReleaseFrame();
+        return 1;
+    }
 
-    D3D11_MAPPED_SUBRESOURCE mapped{};
+    ConversionParams params{};
+    params.width = desc.Width;
+    params.height = desc.Height;
+    params.inputNativeResource = bgraTexture;
+    params.outputNativeResource = outputNv12.Get();
 
-    hr = grabber.getContext()->Map(staging.Get(), 0, D3D11_MAP_READ, 0, &mapped);
-
-    uint8_t* p = static_cast<uint8_t*>(mapped.pData);
-
-    std::cout << "First pixel BGRA = " << (int)p[0] << ", " << (int)p[1] << ", " << (int)p[2] << ", " << (int)p[3] << ".\n";
-
-    if (FAILED(hr)) {
-        std::cerr << "Map failed\n";
+    if (!converter.ConvertBgraToNv12(params)) {
+        std::cerr << "GPU BGRA->NV12 conversion failed.\n";
         grabber.ReleaseFrame();
         return 1;
     }
 
     std::cout << "Working directory: " << std::filesystem::current_path() << std::endl;
+    std::cout << "Conversion complete.\n";
 
-    uint8_t* pixels = static_cast<uint8_t*>(mapped.pData);
+    // dumping texture to disk
+    D3D11_TEXTURE2D_DESC stagingDesc = nv12Desc;
+    stagingDesc.Usage = D3D11_USAGE_STAGING;
+    stagingDesc.BindFlags = 0;
+    stagingDesc.CPUAccessFlags = D3D11_CPU_ACCESS_READ;
 
-    for (uint32_t y = 0; y < desc.Height; ++y) {
-        uint8_t* row = pixels + y * mapped.RowPitch;
+    Microsoft::WRL::ComPtr<ID3D11Texture2D> staging;
+    grabber.getDevice()->CreateTexture2D(&stagingDesc, nullptr, &staging);
+    grabber.getContext()->CopyResource(staging.Get(), outputNv12.Get());
 
-        for (uint32_t x = 0; x < desc.Width; ++x) {
-            uint8_t b = row[x * 4 + 0]; // DXGI Blue
-            uint8_t r = row[x * 4 + 2]; // DXGI Red
+    D3D11_MAPPED_SUBRESOURCE mapped{};
+    hr = grabber.getContext()->Map(staging.Get(), 0, D3D11_MAP_READ, 0, &mapped);
+    if (SUCCEEDED(hr)) {
+        std::ofstream yuvFile("capture.yuv", std::ios::binary);
 
-            row[x * 4 + 0] = r;   // set to Red
-            row[x * 4 + 2] = b;   // set to Blue
-            row[x * 4 + 3] = 255; // alpha to opaque
+        auto* srcBytes = static_cast<uint8_t*>(mapped.pData);
+
+        // Y plane
+        for (uint32_t y = 0; y < desc.Height; ++y) {
+            yuvFile.write(reinterpret_cast<char*>(srcBytes + y * mapped.RowPitch), desc.Width);
         }
+
+        // UV plane
+        uint8_t* uvStart = srcBytes + (mapped.RowPitch * desc.Height);
+        for (uint32_t y = 0; y < desc.Height / 2; ++y) {
+            yuvFile.write(reinterpret_cast<char*>(uvStart + y * mapped.RowPitch), desc.Width);
+        }
+
+        grabber.getContext()->Unmap(staging.Get(), 0);
+        std::cout << "Dumped raw GPU NV12 buffer to capture.yuv\n";
+        std::cout << "Look it up using:\n" <<
+            "& vlc capture.yuv --demux=rawvideo --rawvid-fps=1 --rawvid-width=1920 --rawvid-height=1080 --rawvid-chroma=NV12 --repeat --no-play-and-exit\n";
     }
 
-    int ok = stbi_write_png("capture.png", static_cast<int>(desc.Width), static_cast<int>(desc.Height), 4, mapped.pData, static_cast<int>(mapped.RowPitch));
-
-    grabber.getContext()->Unmap(staging.Get(), 0);
     grabber.ReleaseFrame();
-
-    if (!ok) {
-        std::cerr << "PNG save failed\n";
-        return 1;
-    }
-
-    std::cout << "Saved capture.png\n";
     return 0;
 }
