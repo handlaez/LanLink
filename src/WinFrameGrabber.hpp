@@ -1,5 +1,5 @@
-#ifndef WIN_DUPLICATION_GRABBER_H
-#define WIN_DUPLICATION_GRABBER_H
+#ifndef WIN_FRAME_GRABBER_H
+#define WIN_FRAME_GRABBER_H
 
 #include <wrl/client.h>
 #include <d3d11.h>
@@ -7,10 +7,10 @@
 
 #include "IFrameGrabber.hpp"
 
-class WinDuplicationGrabber : public IFrameGrabber {
+class WinFrameGrabber : public IFrameGrabber {
 public: 
 	bool Initialize() override;
-	bool CaptureFrame(FrameData& outFrame) override;
+	bool CaptureFrame(VideoFrame& outFrame) override;
 	void ReleaseFrame() override;
 
 	ID3D11Device* getDevice() const;

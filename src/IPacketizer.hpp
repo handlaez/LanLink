@@ -12,6 +12,7 @@ struct UDPFrameHeader {
     uint16_t packetCount;
     uint32_t payloadSize;
 };
+#pragma pack(pop)
 
 struct Packet {
     std::vector<uint8_t> bytes;

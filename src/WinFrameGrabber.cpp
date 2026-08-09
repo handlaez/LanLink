@@ -1,11 +1,11 @@
-#include "WinDuplicationGrabber.hpp"
+#include "WinFrameGrabber.hpp"
 
 #include <iostream> 
 
-bool WinDuplicationGrabber::Initialize()
+bool WinFrameGrabber::Initialize()
 {
 	HRESULT hr;
-	UINT flags = D3D11_CREATE_DEVICE_BGRA_SUPPORT;
+	UINT flags = D3D11_CREATE_DEVICE_BGRA_SUPPORT | D3D11_CREATE_DEVICE_VIDEO_SUPPORT;
 	D3D_FEATURE_LEVEL featureLevel;
 
 	hr = D3D11CreateDevice(
@@ -60,13 +60,15 @@ bool WinDuplicationGrabber::Initialize()
 	return true;
 }
 
-bool WinDuplicationGrabber::CaptureFrame(FrameData& outFrame)
+bool WinFrameGrabber::CaptureFrame(VideoFrame& outFrame)
 {
 	DXGI_OUTDUPL_FRAME_INFO frameInfo{};
 
 	Microsoft::WRL::ComPtr<IDXGIResource> resource;
 
 	HRESULT hr = duplication_->AcquireNextFrame(1000, &frameInfo, &resource);
+
+	if (hr == DXGI_ERROR_WAIT_TIMEOUT) return false;
 
 	if (frameInfo.LastPresentTime.QuadPart == 0) {
 		duplication_->ReleaseFrame();
@@ -76,8 +78,6 @@ bool WinDuplicationGrabber::CaptureFrame(FrameData& outFrame)
 	if (frameInfo.ProtectedContentMaskedOut) {
 		std::cout << "DRM detected -> captured screen might be black.\n";
 	}
-
-	if (hr == DXGI_ERROR_WAIT_TIMEOUT) return false;
 
 	if (FAILED(hr)) {
 		std::cerr << "AcquireNextFrame failed\n";
@@ -94,14 +94,14 @@ bool WinDuplicationGrabber::CaptureFrame(FrameData& outFrame)
 	D3D11_TEXTURE2D_DESC desc{};
 	acquiredTexture_->GetDesc(&desc);
 
-	outFrame.nativeTextureHandle = acquiredTexture_.Get();
+	outFrame.nativeResource = acquiredTexture_.Get();
 	outFrame.width = desc.Width;
 	outFrame.height = desc.Height;
 
 	return true;
 }
 
-void WinDuplicationGrabber::ReleaseFrame()
+void WinFrameGrabber::ReleaseFrame()
 {
 	acquiredTexture_.Reset();
 
@@ -109,12 +109,12 @@ void WinDuplicationGrabber::ReleaseFrame()
 		duplication_->ReleaseFrame();
 }
 
-ID3D11Device* WinDuplicationGrabber::getDevice() const
+ID3D11Device* WinFrameGrabber::getDevice() const
 {
 	return device_.Get();
 }
 
-ID3D11DeviceContext* WinDuplicationGrabber::getContext() const
+ID3D11DeviceContext* WinFrameGrabber::getContext() const
 {
 	return context_.Get();
 }

@@ -3,11 +3,11 @@
 
 #include <cstdint>
 
+#include "VideoFrame.hpp"
+
 struct ConversionParams {
-    uint32_t width;
-    uint32_t height;
-    void* inputNativeResource;   // ID3D11Texture2D* or VkImage/VkBuffer
-    void* outputNativeResource;  // Target NV12
+    VideoFrame inputNativeResource;   // ID3D11Texture2D or VkImage/VkBuffer
+    VideoFrame outputNativeResource;  // Target NV12
 };
 
 class IFrameConverter {

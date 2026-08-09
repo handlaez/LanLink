@@ -124,8 +124,8 @@ void WinFrameConverter::RecreateViewsForOutput(ID3D11Texture2D* pOutputNv12) {
 bool WinFrameConverter::ConvertBgraToNv12(const ConversionParams& params) {
     if (!m_initialized) return false;
 
-    auto* pInputBgra = static_cast<ID3D11Texture2D*>(params.inputNativeResource);
-    auto* pOutputNv12 = static_cast<ID3D11Texture2D*>(params.outputNativeResource);
+    auto* pInputBgra = static_cast<ID3D11Texture2D*>(params.inputNativeResource.nativeResource);
+    auto* pOutputNv12 = static_cast<ID3D11Texture2D*>(params.outputNativeResource.nativeResource);
 
     if (!pInputBgra || !pOutputNv12) return false;
 
@@ -161,8 +161,8 @@ bool WinFrameConverter::ConvertBgraToNv12(const ConversionParams& params) {
     m_context->CSSetUnorderedAccessViews(0, 2, uavs, nullptr);
 
     // dispatch (16x16)
-    UINT dispatchX = (params.width + 15) / 16;
-    UINT dispatchY = (params.height + 15) / 16;
+    UINT dispatchX = (params.outputNativeResource.width + 15) / 16;
+    UINT dispatchY = (params.outputNativeResource.height + 15) / 16;
     m_context->Dispatch(dispatchX, dispatchY, 1);
 
     // unbind

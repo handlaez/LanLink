@@ -1,19 +1,20 @@
 cmake_minimum_required(VERSION 3.20)
 project(LanLink LANGUAGES CXX)
 
-set(CMAKE_CXX_STANDARD 17)
+set(CMAKE_CXX_STANDARD 20)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
-# include
 include_directories(${CMAKE_CURRENT_SOURCE_DIR}/include)
 include_directories(${CMAKE_CURRENT_SOURCE_DIR}/third_party)
 
-# src
 set(SOURCES
     src/main.cpp
-    src/WinDuplicationGrabber.cpp
+    src/WinFrameGrabber.cpp
     src/stb_image_implementation.cpp
-    src/WinFrameConverter.cpp "src/UnifiedPacketizer.cpp")
+    src/WinFrameConverter.cpp
+    src/UnifiedPacketizer.cpp
+    src/WinFrameEncoder.cpp
+)
 
 set(HEADERS
     src/IFrameGrabber.hpp
@@ -22,28 +23,35 @@ set(HEADERS
     src/IPacketizer.hpp
     src/IPacketSender.hpp
     src/WinFrameConverter.hpp
-    src/WinDuplicationGrabber.hpp
+    src/WinFrameGrabber.hpp
 )
 
 add_executable(${PROJECT_NAME} ${SOURCES} ${HEADERS})
 
-# native WinSDK libraries
-target_link_libraries(${PROJECT_NAME} PRIVATE
-    d3d11.lib
-    dxgi.lib
-    d3dcompiler.lib
-    ws2_32.lib
-)
+if(WIN32)
 
-# make it lean
-target_compile_definitions(${PROJECT_NAME} PRIVATE
-    WIN32_LEAN_AND_MEAN
-    NOMINMAX
-)
+    target_link_libraries(${PROJECT_NAME} PRIVATE
+        d3d11
+        dxgi
+        d3dcompiler
+        ws2_32
 
-# copy shader file next to compiled executable
-# add_custom_command(TARGET ${PROJECT_NAME} POST_BUILD
-#     COMMAND ${CMAKE_COMMAND} -E copy_if_different
-#         "${CMAKE_CURRENT_SOURCE_DIR}/shaders/NV12Converter.hlsl"
-#         "$<TARGET_FILE_DIR:${PROJECT_NAME}>/NV12Converter.hlsl"
-# )
+        mfplat
+        mf
+        mfreadwrite
+        mfuuid
+    )
+
+    target_compile_definitions(${PROJECT_NAME} PRIVATE
+        WIN32_LEAN_AND_MEAN
+        NOMINMAX
+    )
+
+    # copy shader file next to compiled executable
+    # add_custom_command(TARGET ${PROJECT_NAME} POST_BUILD
+    #     COMMAND ${CMAKE_COMMAND} -E copy_if_different
+    #         "${CMAKE_CURRENT_SOURCE_DIR}/shaders/NV12Converter.hlsl"
+    #         "$<TARGET_FILE_DIR:${PROJECT_NAME}>/NV12Converter.hlsl"
+    # )
+
+endif()

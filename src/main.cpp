@@ -2,24 +2,26 @@
 #include <filesystem>
 #include <fstream>
 
-#include "WinDuplicationGrabber.hpp"
+#include "WinFrameGrabber.hpp"
 #include "WinFrameConverter.hpp"
-#include "stb_image_write.h"
+#include "WinFrameEncoder.hpp"
+
+//#include "stb_image_write.h"
 
 int main()
 {
-    WinDuplicationGrabber grabber;
+    WinFrameGrabber grabber;
 
     if (!grabber.Initialize()) {
         std::cerr << "Failed to initialize grabber.\n";
         return 1;
     }
 
-    FrameData frame;
+    VideoFrame bgraFrame{};
     bool frameCaptured = false;
 
     for (int i = 0; i < 50; ++i) {
-        if (grabber.CaptureFrame(frame)) {
+        if (grabber.CaptureFrame(bgraFrame)) {
             frameCaptured = true;
             break;
         }
@@ -31,7 +33,7 @@ int main()
         return 1;
     }
 
-    auto* bgraTexture = static_cast<ID3D11Texture2D*>(frame.nativeTextureHandle);
+    auto* bgraTexture = static_cast<ID3D11Texture2D*>(bgraFrame.nativeResource);
 
     D3D11_TEXTURE2D_DESC desc{};
     bgraTexture->GetDesc(&desc);
@@ -57,6 +59,11 @@ int main()
         return 1;
     }
 
+    VideoFrame nv12Frame{};
+    nv12Frame.nativeResource = outputNv12.Get();
+    nv12Frame.width = desc.Width;
+    nv12Frame.height = desc.Height;
+
     WinFrameConverter converter(grabber.getDevice(), grabber.getContext());
     if (!converter.Initialize(desc.Width, desc.Height)) {
         std::cerr << "Failed to initialize GPU comp shader.\n";
@@ -65,10 +72,8 @@ int main()
     }
 
     ConversionParams params{};
-    params.width = desc.Width;
-    params.height = desc.Height;
-    params.inputNativeResource = bgraTexture;
-    params.outputNativeResource = outputNv12.Get();
+    params.inputNativeResource = bgraFrame;
+    params.outputNativeResource = nv12Frame;
 
     if (!converter.ConvertBgraToNv12(params)) {
         std::cerr << "GPU BGRA->NV12 conversion failed.\n";
@@ -78,6 +83,14 @@ int main()
 
     std::cout << "Working directory: " << std::filesystem::current_path() << std::endl;
     std::cout << "Conversion complete.\n";
+
+    WinFrameEncoder encoder(grabber.getDevice(), grabber.getContext());
+
+    if (!encoder.Initialize(desc.Width, desc.Height, 60, 8'000'000))
+    {
+        std::cerr << "Encoder init failed.\n";
+        return 1;
+    }
 
     // dumping texture to disk
     D3D11_TEXTURE2D_DESC stagingDesc = nv12Desc;
