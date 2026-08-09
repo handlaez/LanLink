@@ -13,12 +13,14 @@ set(SOURCES
     src/main.cpp
     src/WinDuplicationGrabber.cpp
     src/stb_image_implementation.cpp
-    src/WinFrameConverter.cpp)
+    src/WinFrameConverter.cpp "src/UnifiedPacketizer.cpp")
 
 set(HEADERS
     src/IFrameGrabber.hpp
     src/IFrameConverter.hpp
-    src/IVideoEncoder.hpp
+    src/IFrameEncoder.hpp
+    src/IPacketizer.hpp
+    src/IPacketSender.hpp
     src/WinFrameConverter.hpp
     src/WinDuplicationGrabber.hpp
 )

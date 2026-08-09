@@ -109,8 +109,6 @@ int main()
 
         grabber.getContext()->Unmap(staging.Get(), 0);
         std::cout << "Dumped raw GPU NV12 buffer to capture.yuv\n";
-        std::cout << "Look it up using:\n" <<
-            "& vlc capture.yuv --demux=rawvideo --rawvid-fps=1 --rawvid-width=1920 --rawvid-height=1080 --rawvid-chroma=NV12 --repeat --no-play-and-exit\n";
     }
 
     grabber.ReleaseFrame();
