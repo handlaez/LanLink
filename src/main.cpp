@@ -101,13 +101,13 @@ int main()
         encoder.SubmitFrame(nv12Frame);
         std::cout << "NV12 frame " << nv12Frame.timestamp << " submitted.\n";
 
+        Sleep(16); // simulate 60 FPS capture
+
         EncodedFrame encoded;
-        while (encoder.ReceiveFrame(encoded))
+        if (encoder.ReceiveFrame(encoded))
         {
             std::cout << "HEVC frame (receive): " << encoded.data.size() << " bytes\n";
         }
-
-        Sleep(16); // simulate 60 FPS capture
     }
 
     // spsc test
