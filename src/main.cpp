@@ -92,6 +92,23 @@ int main()
         return 1;
     }
 
+    // encoder test
+    for (int i = 0; i < 120; ++i)
+    {
+        nv12Frame.timestamp = i * (10'000'000ULL / 60);
+
+        encoder.SubmitFrame(nv12Frame);
+        std::cout << "NV12 frame " << nv12Frame.timestamp << " submitted.\n";
+
+        EncodedFrame encoded;
+        while (encoder.ReceiveFrame(encoded))
+        {
+            std::cout << "HEVC frame (receive): " << encoded.data.size() << " bytes\n";
+        }
+
+        Sleep(16); // simulate 60 FPS capture
+    }
+
     // dumping texture to disk
     D3D11_TEXTURE2D_DESC stagingDesc = nv12Desc;
     stagingDesc.Usage = D3D11_USAGE_STAGING;

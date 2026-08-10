@@ -8,6 +8,7 @@
 #include <mfidl.h>
 #include <mfreadwrite.h>
 #include <mftransform.h>
+#include <Mferror.h>
 
 #include "IFrameEncoder.hpp"
 
@@ -18,11 +19,14 @@ public:
     ~WinFrameEncoder() override;
 
     bool Initialize(uint32_t width, uint32_t height, uint32_t fps, uint32_t bitrate) override;
-    bool EncodeFrame(const VideoFrame& frame, EncodedFrame& outFrame) override;
+    bool SubmitFrame(const VideoFrame& frame) override;
+    bool ReceiveFrame(EncodedFrame& outFrame) override;
     void Shutdown() override;
 
 private:
     bool initialized_ = false;
+
+    bool CreateInputSample(ID3D11Texture2D* texture, uint64_t timestamp, IMFSample** sample);
 
     uint32_t width_ = 0;
     uint32_t height_ = 0;
@@ -35,6 +39,7 @@ private:
     Microsoft::WRL::ComPtr<IMFTransform> encoder_;
     Microsoft::WRL::ComPtr<IMFDXGIDeviceManager> dxgiManager_;
     UINT dxgiResetToken_ = 0;
+    Microsoft::WRL::ComPtr<IMFMediaEventGenerator> eventGenerator_;
 };
 
 #endif // WIN_FRAME_ENCODER_HPP

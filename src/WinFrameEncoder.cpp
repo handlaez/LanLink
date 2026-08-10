@@ -154,15 +154,139 @@ bool WinFrameEncoder::Initialize(uint32_t width, uint32_t height, uint32_t fps, 
     encoder_->ProcessMessage(MFT_MESSAGE_NOTIFY_BEGIN_STREAMING, 0);
     encoder_->ProcessMessage(MFT_MESSAGE_NOTIFY_START_OF_STREAM, 0);
 
+    hr = encoder_.As(&eventGenerator_);
+    if (FAILED(hr)) {
+        std::cerr << "Failed to get IMFMediaEventGenerator: 0x" << std::hex << hr << std::dec << std::endl;
+        return false;
+    }
+
     initialized_ = true;
     std::cout << "Media Foundation HEVC encoder initialized\n";
 
     return true;
 }
 
-bool WinFrameEncoder::EncodeFrame(const VideoFrame& frame, EncodedFrame& outFrame)
+bool WinFrameEncoder::SubmitFrame(const VideoFrame& frame)
 {
-	return false;
+    if (!initialized_)
+        return false;
+
+    auto* texture = static_cast<ID3D11Texture2D*>(frame.nativeResource);
+
+    if (!texture)
+        return false;
+
+    Microsoft::WRL::ComPtr<IMFSample> sample;
+
+    if (!CreateInputSample(texture, frame.timestamp, &sample))
+        return false;
+
+    HRESULT hr = encoder_->ProcessInput(0, sample.Get(), 0);
+
+    if (hr == MF_E_NOTACCEPTING)
+        return false;
+
+    if (FAILED(hr)) {
+        std::cerr << "WinEncoder -- ProcessInput failed: 0x" << std::hex << hr << std::dec << std::endl;
+        return false;
+    }
+
+    return true;
+}
+
+bool WinFrameEncoder::ReceiveFrame(EncodedFrame& outFrame)
+{
+    if (!initialized_)
+        return false;
+
+    // output requirements.
+    MFT_OUTPUT_STREAM_INFO streamInfo{};
+    HRESULT hr = encoder_->GetOutputStreamInfo(0, &streamInfo);
+
+    if (FAILED(hr)) {
+        std::cerr << "GetOutputStreamInfo failed: 0x" << std::hex << hr << std::dec << '\n';
+        return false;
+    }
+
+    Microsoft::WRL::ComPtr<IMFSample> sample;
+    Microsoft::WRL::ComPtr<IMFMediaBuffer> buffer;
+
+    MFT_OUTPUT_DATA_BUFFER output{};
+    output.dwStreamID = 0;
+
+    if (!(streamInfo.dwFlags & MFT_OUTPUT_STREAM_PROVIDES_SAMPLES))
+    {
+        hr = MFCreateSample(&sample);
+        if (FAILED(hr))
+            return false;
+
+        hr = MFCreateMemoryBuffer(streamInfo.cbSize, &buffer);
+        if (FAILED(hr))
+            return false;
+
+        sample->AddBuffer(buffer.Get());
+        output.pSample = sample.Get();
+    }
+
+    DWORD status = 0;
+
+    hr = encoder_->ProcessOutput(0, 1, &output, &status);
+
+    // no frame is ready yet
+    if (hr == MF_E_TRANSFORM_NEED_MORE_INPUT)
+        return false;
+
+    if (hr == MF_E_TRANSFORM_STREAM_CHANGE)
+    {
+        std::cerr << "Encoder output stream changed.\n";
+        return false;
+    }
+
+    if (FAILED(hr)) {
+        std::cerr << "ProcessOutput failed: 0x" << std::hex << hr << std::dec << '\n';
+        return false;
+    }
+
+    IMFSample* outputSample = output.pSample ? output.pSample : sample.Get();
+
+    if (!outputSample)
+        return false;
+
+    Microsoft::WRL::ComPtr<IMFMediaBuffer> contiguous;
+
+    hr = outputSample->ConvertToContiguousBuffer(&contiguous);
+    if (FAILED(hr))
+        return false;
+
+    BYTE* data = nullptr;
+    DWORD maxLen = 0;
+    DWORD curLen = 0;
+
+    hr = contiguous->Lock(&data, &maxLen, &curLen);
+    if (FAILED(hr))
+        return false;
+
+    outFrame.data.assign(data, data + curLen);
+
+    contiguous->Unlock();
+
+    LONGLONG ts = 0;
+    if (SUCCEEDED(outputSample->GetSampleTime(&ts)))
+        outFrame.timestamp = static_cast<uint64_t>(ts);
+
+    // keyframe detection
+    UINT32 cleanPoint = FALSE;
+    if (SUCCEEDED(outputSample->GetUINT32(MFSampleExtension_CleanPoint, &cleanPoint)) && cleanPoint) {
+        outFrame.type = EncodedFrameType::Keyframe;
+    }
+    else {
+        outFrame.type = EncodedFrameType::Delta;
+    }
+
+    if (output.pEvents)
+        output.pEvents->Release();
+
+    return true;
 }
 
 void WinFrameEncoder::Shutdown()
@@ -183,4 +307,34 @@ void WinFrameEncoder::Shutdown()
     MFShutdown();
 
     initialized_ = false;
+}
+
+bool WinFrameEncoder::CreateInputSample(ID3D11Texture2D* texture, uint64_t timestamp, IMFSample** sample)
+{
+    Microsoft::WRL::ComPtr<IMFMediaBuffer> buffer;
+
+    HRESULT hr = MFCreateDXGISurfaceBuffer( __uuidof(ID3D11Texture2D), texture, 0, FALSE, &buffer);
+
+    if (FAILED(hr)) {
+        std::cerr << "MFCreateDXGISurfaceBuffer failed: 0x" << std::hex << hr << std::dec << '\n';
+        return false;
+    }
+
+    hr = MFCreateSample(sample);
+    if (FAILED(hr)) {
+        std::cerr << "MFCreateSample failed: 0x" << std::hex << hr << std::dec << '\n';
+        return false;
+    }
+
+    hr = (*sample)->AddBuffer(buffer.Get());
+    if (FAILED(hr))
+        return false;
+
+    // MediaFoundation timestamps are in 100-ns units.
+    (*sample)->SetSampleTime(static_cast<LONGLONG>(timestamp));
+
+    const LONGLONG duration = 10'000'000LL / fps_;
+    (*sample)->SetSampleDuration(duration);
+
+    return true;
 }

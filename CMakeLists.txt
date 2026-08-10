@@ -17,6 +17,8 @@ set(SOURCES
 )
 
 set(HEADERS
+    src/VideoFrame.hpp
+    src/EncodedFrame.hpp
     src/IFrameGrabber.hpp
     src/IFrameConverter.hpp
     src/IFrameEncoder.hpp
