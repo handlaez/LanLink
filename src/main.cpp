@@ -5,6 +5,7 @@
 #include "WinFrameGrabber.hpp"
 #include "WinFrameConverter.hpp"
 #include "WinFrameEncoder.hpp"
+#include "spscRingBuffer.hpp"
 
 //#include "stb_image_write.h"
 
@@ -25,7 +26,7 @@ int main()
             frameCaptured = true;
             break;
         }
-        Sleep(16); // few first frames are pitch black hence the sleep
+        Sleep(16); // few first frames are (might be) pitch black hence the sleep
     }
 
     if (!frameCaptured) {
@@ -107,6 +108,25 @@ int main()
         }
 
         Sleep(16); // simulate 60 FPS capture
+    }
+
+    // spsc test
+    spscRingBuffer<VideoFrame, 4> queue;
+
+    for (int i = 0; i < 10; ++i)
+    {
+        VideoFrame f{};
+        f.timestamp = i;
+
+        push_drop_oldest(queue, f);
+
+        std::cout << "Pushed " << i << ", queue size = " << queue.size() << '\n';
+    }
+
+    VideoFrame out;
+    while (queue.pop(out))
+    {
+        std::cout << "Popped " << out.timestamp << '\n';
     }
 
     // dumping texture to disk
