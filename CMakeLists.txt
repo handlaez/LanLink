@@ -14,7 +14,7 @@ set(SOURCES
     src/WinFrameConverter.cpp
     src/UnifiedPacketizer.cpp
     src/WinFrameEncoder.cpp
-)
+    src/WinPacketSender.cpp)
 
 set(HEADERS
     src/VideoFrame.hpp
@@ -26,6 +26,7 @@ set(HEADERS
     src/IPacketSender.hpp
     src/WinFrameConverter.hpp
     src/WinFrameGrabber.hpp
+    src/WinPacketSender.hpp
 )
 
 add_executable(${PROJECT_NAME} ${SOURCES} ${HEADERS})

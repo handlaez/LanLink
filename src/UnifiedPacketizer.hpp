@@ -5,12 +5,13 @@
 #include <cstddef>
 #include <vector>
 #include "IPacketizer.hpp"
+#include "EncodedFrame.hpp"
 
 class UnifiedPacketizer
 {
 public:
 	static constexpr std::size_t MaxDatagramSize = 1400;
-	std::vector<Packet> Packetize(const uint8_t* frameData, std::size_t frameSize, uint32_t frameId) const;
+	std::vector<Packet> Packetize(EncodedFrame& frame) const;
 };
 
 #endif 

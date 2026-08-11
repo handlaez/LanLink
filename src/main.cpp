@@ -5,9 +5,8 @@
 #include "WinFrameGrabber.hpp"
 #include "WinFrameConverter.hpp"
 #include "WinFrameEncoder.hpp"
-#include "spscRingBuffer.hpp"
-
-//#include "stb_image_write.h"
+#include "UnifiedPacketizer.hpp"
+#include "WinPacketSender.hpp"
 
 int main()
 {
@@ -21,21 +20,19 @@ int main()
     VideoFrame bgraFrame{};
     bool frameCaptured = false;
 
-    for (int i = 0; i < 50; ++i) {
+    for (int i = 0; i < 40; ++i) {
         if (grabber.CaptureFrame(bgraFrame)) {
             frameCaptured = true;
             break;
         }
-        Sleep(16); // few first frames are (might be) pitch black hence the sleep
+        Sleep(4);
     }
-
     if (!frameCaptured) {
-        std::cerr << "Failed to capture a valid frame.\n";
+        std::cerr << "Failed to capture a valid frame (DXGI timeout).\n";
         return 1;
     }
 
     auto* bgraTexture = static_cast<ID3D11Texture2D*>(bgraFrame.nativeResource);
-
     D3D11_TEXTURE2D_DESC desc{};
     bgraTexture->GetDesc(&desc);
 
@@ -52,7 +49,6 @@ int main()
     nv12Desc.BindFlags = D3D11_BIND_UNORDERED_ACCESS | D3D11_BIND_SHADER_RESOURCE;
 
     Microsoft::WRL::ComPtr<ID3D11Texture2D> outputNv12;
-
     HRESULT hr = grabber.getDevice()->CreateTexture2D(&nv12Desc, nullptr, &outputNv12);
     if (FAILED(hr)) {
         std::cerr << "Failed to create GPU NV12 texture.\n";
@@ -82,83 +78,41 @@ int main()
         return 1;
     }
 
-    std::cout << "Working directory: " << std::filesystem::current_path() << std::endl;
-    std::cout << "Conversion complete.\n";
-
     WinFrameEncoder encoder(grabber.getDevice(), grabber.getContext());
-
-    if (!encoder.Initialize(desc.Width, desc.Height, 60, 8'000'000))
-    {
+    if (!encoder.Initialize(desc.Width, desc.Height, 60, 8'000'000)) {
         std::cerr << "Encoder init failed.\n";
         return 1;
     }
 
-    // encoder test
+    // pipeline test
+    UnifiedPacketizer packetizer;
+    WinPacketSender packetSender;
+
+    if (!packetSender.Open("127.0.0.1", 12345)) {
+        std::cerr << "Failed to open WinPacketSender socket.\n";
+        return 1;
+    }
+
+    EncodedFrame encoded;
+
     for (int i = 0; i < 120; ++i)
     {
         nv12Frame.timestamp = i * (10'000'000ULL / 60);
 
         encoder.SubmitFrame(nv12Frame);
-        std::cout << "NV12 frame " << nv12Frame.timestamp << " submitted.\n";
 
-        Sleep(16); // simulate 60 FPS capture
+        Sleep(16); // ~60 FPS pacing
 
-        EncodedFrame encoded;
         if (encoder.ReceiveFrame(encoded))
         {
-            std::cout << "HEVC frame (receive): " << encoded.data.size() << " bytes\n";
+            auto packets = packetizer.Packetize(encoded);
+
+            for (auto packet : packets) {
+                packetSender.Send(packet.bytes);
+            }
+
+            std::cout << "Sent " << packets.size() << " UDP packets (ts: " << encoded.timestamp << ")\n";
         }
-    }
-
-    // spsc test
-    spscRingBuffer<VideoFrame, 4> queue;
-
-    for (int i = 0; i < 10; ++i)
-    {
-        VideoFrame f{};
-        f.timestamp = i;
-
-        push_drop_oldest(queue, f);
-
-        std::cout << "Pushed " << i << ", queue size = " << queue.size() << '\n';
-    }
-
-    VideoFrame out;
-    while (queue.pop(out))
-    {
-        std::cout << "Popped " << out.timestamp << '\n';
-    }
-
-    // dumping texture to disk
-    D3D11_TEXTURE2D_DESC stagingDesc = nv12Desc;
-    stagingDesc.Usage = D3D11_USAGE_STAGING;
-    stagingDesc.BindFlags = 0;
-    stagingDesc.CPUAccessFlags = D3D11_CPU_ACCESS_READ;
-
-    Microsoft::WRL::ComPtr<ID3D11Texture2D> staging;
-    grabber.getDevice()->CreateTexture2D(&stagingDesc, nullptr, &staging);
-    grabber.getContext()->CopyResource(staging.Get(), outputNv12.Get());
-
-    D3D11_MAPPED_SUBRESOURCE mapped{};
-    hr = grabber.getContext()->Map(staging.Get(), 0, D3D11_MAP_READ, 0, &mapped);
-    if (SUCCEEDED(hr)) {
-        std::ofstream yuvFile("capture.yuv", std::ios::binary);
-
-        auto* srcBytes = static_cast<uint8_t*>(mapped.pData);
-
-        // Y plane
-        for (uint32_t y = 0; y < desc.Height; ++y) {
-            yuvFile.write(reinterpret_cast<char*>(srcBytes + y * mapped.RowPitch), desc.Width);
-        }
-
-        // UV plane
-        uint8_t* uvStart = srcBytes + (mapped.RowPitch * desc.Height);
-        for (uint32_t y = 0; y < desc.Height / 2; ++y) {
-            yuvFile.write(reinterpret_cast<char*>(uvStart + y * mapped.RowPitch), desc.Width);
-        }
-
-        grabber.getContext()->Unmap(staging.Get(), 0);
-        std::cout << "Dumped raw GPU NV12 buffer to capture.yuv\n";
     }
 
     grabber.ReleaseFrame();

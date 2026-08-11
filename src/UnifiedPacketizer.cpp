@@ -10,12 +10,14 @@
 #endif
 
 
-std::vector<Packet> UnifiedPacketizer::Packetize(const uint8_t* frameData, std::size_t frameSize, uint32_t frameId) const
+std::vector<Packet> UnifiedPacketizer::Packetize(EncodedFrame& frame) const
 {
 	std::vector<Packet> packets;
 
-	if (frameData == nullptr || frameSize == 0)
+	if (frame.data.empty())
 		return packets;
+
+	size_t frameSize = frame.data.size();
 
 	constexpr std::size_t headerSize = sizeof(UDPFrameHeader);
 
@@ -38,12 +40,16 @@ std::vector<Packet> UnifiedPacketizer::Packetize(const uint8_t* frameData, std::
 
 		auto* header = reinterpret_cast<UDPFrameHeader*>(packet.bytes.data());
 
-		header->frameId = htonl(frameId);
+#ifdef _WIN32
+		header->timestamp = htonll(frame.timestamp);
+#else
+		header->timestamp = htobe64(frame.timestamp);
+#endif
 		header->packetIndex = htons(packetIndex);
 		header->packetCount = htons(packetCount);
 		header->payloadSize = htonl(static_cast<uint32_t>(payloadSize));
 		
-		std::memcpy(packet.bytes.data() + headerSize, frameData + offset, payloadSize);
+		std::memcpy(packet.bytes.data() + headerSize, frame.data.data() + offset, payloadSize);
 		
 		packets.push_back(std::move(packet));
 		

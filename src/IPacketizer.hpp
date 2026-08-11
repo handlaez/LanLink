@@ -7,7 +7,7 @@
 
 #pragma pack(push, 1)
 struct UDPFrameHeader {
-    uint32_t frameId;
+    uint64_t timestamp;
     uint16_t packetIndex;
     uint16_t packetCount;
     uint32_t payloadSize;

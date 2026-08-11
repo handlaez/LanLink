@@ -5,10 +5,8 @@
 #include <span>
 #include <string>
 
-class ITransport {
+class IPacketSender {
 public:
-    virtual ~ITransport() = default;
-
     virtual bool Open(const std::string& host, uint16_t port) = 0;
     virtual bool Send(std::span<const uint8_t> bytes) = 0;
     virtual void Close() = 0;
