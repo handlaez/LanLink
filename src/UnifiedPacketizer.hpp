@@ -10,7 +10,7 @@
 class UnifiedPacketizer
 {
 public:
-	static constexpr std::size_t MaxDatagramSize = 1400;
+	static constexpr std::size_t MaxDatagramSize = 1200;
 	std::vector<Packet> Packetize(EncodedFrame& frame) const;
 };
 

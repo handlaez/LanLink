@@ -1,6 +1,7 @@
 #include <iostream>
 #include <filesystem>
 #include <fstream>
+#include <chrono>
 
 #include "WinFrameGrabber.hpp"
 #include "WinFrameConverter.hpp"
@@ -8,39 +9,37 @@
 #include "UnifiedPacketizer.hpp"
 #include "WinPacketSender.hpp"
 
-int main()
+uint64_t now100ns()
 {
-    WinFrameGrabber grabber;
+    using namespace std::chrono;
+    return duration_cast<duration<uint64_t, std::ratio<1, 10'000'000>>>(steady_clock::now().time_since_epoch()).count();
+}
 
-    if (!grabber.Initialize()) {
-        std::cerr << "Failed to initialize grabber.\n";
-        return 1;
-    }
-
+bool QueryFrameDimensions(WinFrameGrabber& grabber, UINT& outWidth, UINT& outHeight)
+{
     VideoFrame bgraFrame{};
-    bool frameCaptured = false;
-
     for (int i = 0; i < 40; ++i) {
         if (grabber.CaptureFrame(bgraFrame)) {
-            frameCaptured = true;
-            break;
+            auto* texture = static_cast<ID3D11Texture2D*>(bgraFrame.nativeResource);
+            D3D11_TEXTURE2D_DESC desc{};
+            texture->GetDesc(&desc);
+
+            outWidth = desc.Width;
+            outHeight = desc.Height;
+
+            grabber.ReleaseFrame(); // release probe frame immediately
+            return true;
         }
         Sleep(4);
     }
-    if (!frameCaptured) {
-        std::cerr << "Failed to capture a valid frame (DXGI timeout).\n";
-        return 1;
-    }
+    return false;
+}
 
-    auto* bgraTexture = static_cast<ID3D11Texture2D*>(bgraFrame.nativeResource);
-    D3D11_TEXTURE2D_DESC desc{};
-    bgraTexture->GetDesc(&desc);
-
-    std::cout << "Width: " << desc.Width << " Height: " << desc.Height << " Format: " << desc.Format << ".\n";
-
+Microsoft::WRL::ComPtr<ID3D11Texture2D> CreateNv12Texture(ID3D11Device* device, UINT width, UINT height)
+{
     D3D11_TEXTURE2D_DESC nv12Desc{};
-    nv12Desc.Width = desc.Width;
-    nv12Desc.Height = desc.Height;
+    nv12Desc.Width = width;
+    nv12Desc.Height = height;
     nv12Desc.MipLevels = 1;
     nv12Desc.ArraySize = 1;
     nv12Desc.Format = DXGI_FORMAT_NV12;
@@ -49,72 +48,89 @@ int main()
     nv12Desc.BindFlags = D3D11_BIND_UNORDERED_ACCESS | D3D11_BIND_SHADER_RESOURCE;
 
     Microsoft::WRL::ComPtr<ID3D11Texture2D> outputNv12;
-    HRESULT hr = grabber.getDevice()->CreateTexture2D(&nv12Desc, nullptr, &outputNv12);
-    if (FAILED(hr)) {
+    HRESULT hr = device->CreateTexture2D(&nv12Desc, nullptr, &outputNv12);
+    if (FAILED(hr)) return nullptr;
+
+    return outputNv12;
+}
+
+int main()
+{
+    WinFrameGrabber grabber;
+    if (!grabber.Initialize()) {
+        std::cerr << "Failed to initialize grabber.\n";
+        return 1;
+    }
+
+    UINT width = 0, height = 0;
+    if (!QueryFrameDimensions(grabber, width, height)) {
+        std::cerr << "Failed to capture initial probe frame.\n";
+        return 1;
+    }
+    std::cout << "Width: " << width << " Height: " << height << "\n";
+
+    auto outputNv12 = CreateNv12Texture(grabber.getDevice(), width, height);
+    if (!outputNv12) {
         std::cerr << "Failed to create GPU NV12 texture.\n";
-        grabber.ReleaseFrame();
         return 1;
     }
 
     VideoFrame nv12Frame{};
     nv12Frame.nativeResource = outputNv12.Get();
-    nv12Frame.width = desc.Width;
-    nv12Frame.height = desc.Height;
+    nv12Frame.width = width;
+    nv12Frame.height = height;
 
     WinFrameConverter converter(grabber.getDevice(), grabber.getContext());
-    if (!converter.Initialize(desc.Width, desc.Height)) {
+    if (!converter.Initialize(width, height)) {
         std::cerr << "Failed to initialize GPU comp shader.\n";
-        grabber.ReleaseFrame();
-        return 1;
-    }
-
-    ConversionParams params{};
-    params.inputNativeResource = bgraFrame;
-    params.outputNativeResource = nv12Frame;
-
-    if (!converter.ConvertBgraToNv12(params)) {
-        std::cerr << "GPU BGRA->NV12 conversion failed.\n";
-        grabber.ReleaseFrame();
         return 1;
     }
 
     WinFrameEncoder encoder(grabber.getDevice(), grabber.getContext());
-    if (!encoder.Initialize(desc.Width, desc.Height, 60, 8'000'000)) {
+    if (!encoder.Initialize(width, height, 60, 8'000'000)) {
         std::cerr << "Encoder init failed.\n";
         return 1;
     }
 
-    // pipeline test
     UnifiedPacketizer packetizer;
     WinPacketSender packetSender;
-
-    if (!packetSender.Open("127.0.0.1", 12345)) {
+    if (!packetSender.Open("192.168.0.104", 5000)) {
         std::cerr << "Failed to open WinPacketSender socket.\n";
         return 1;
     }
 
     EncodedFrame encoded;
 
-    for (int i = 0; i < 120; ++i)
+    while (true)
     {
-        nv12Frame.timestamp = i * (10'000'000ULL / 60);
+        VideoFrame bgraFrame{};
 
-        encoder.SubmitFrame(nv12Frame);
-
-        Sleep(16); // ~60 FPS pacing
-
-        if (encoder.ReceiveFrame(encoded))
+        // Non-blocking frame acquisition (or short timeout depending on grabber implementation)
+        if (grabber.CaptureFrame(bgraFrame))
         {
-            auto packets = packetizer.Packetize(encoded);
+            ConversionParams params{};
+            params.inputNativeResource = bgraFrame;
+            params.outputNativeResource = nv12Frame;
 
-            for (auto packet : packets) {
-                packetSender.Send(packet.bytes);
+            if (converter.ConvertBgraToNv12(params))
+            {
+                nv12Frame.timestamp = now100ns();
+                encoder.SubmitFrame(nv12Frame);
+                Sleep(16);
+
+                if (encoder.ReceiveFrame(encoded))
+                {
+                    auto packets = packetizer.Packetize(encoded);
+                    for (const auto& packet : packets) {
+                        packetSender.Send(packet.bytes);
+                    }
+                    std::cout << "Sent " << packets.size() << " UDP packets (ts: " << encoded.timestamp << ")\n";
+                }
             }
 
-            std::cout << "Sent " << packets.size() << " UDP packets (ts: " << encoded.timestamp << ")\n";
+            grabber.ReleaseFrame();
         }
     }
 
-    grabber.ReleaseFrame();
     return 0;
 }
