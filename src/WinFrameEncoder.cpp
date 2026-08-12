@@ -202,7 +202,6 @@ bool WinFrameEncoder::ReceiveFrame(EncodedFrame& outFrame)
     // output requirements.
     MFT_OUTPUT_STREAM_INFO streamInfo{};
     HRESULT hr = encoder_->GetOutputStreamInfo(0, &streamInfo);
-
     if (FAILED(hr)) {
         std::cerr << "GetOutputStreamInfo failed: 0x" << std::hex << hr << std::dec << '\n';
         return false;
@@ -229,45 +228,49 @@ bool WinFrameEncoder::ReceiveFrame(EncodedFrame& outFrame)
     }
 
     DWORD status = 0;
-
     hr = encoder_->ProcessOutput(0, 1, &output, &status);
 
     // no frame is ready yet
-    if (hr == MF_E_TRANSFORM_NEED_MORE_INPUT)
-        return false;
-
-    if (hr == MF_E_TRANSFORM_STREAM_CHANGE)
-    {
-        std::cerr << "Encoder output stream changed.\n";
+    if (hr == MF_E_TRANSFORM_NEED_MORE_INPUT) {
+        if (output.pEvents) 
+            output.pEvents->Release();
         return false;
     }
 
     if (FAILED(hr)) {
-        std::cerr << "ProcessOutput failed: 0x" << std::hex << hr << std::dec << '\n';
+        //std::cerr << "ProcessOutput failed: 0x" << std::hex << hr << std::dec << '\n';
         return false;
     }
 
-    IMFSample* outputSample = output.pSample ? output.pSample : sample.Get();
+    // memory leak plug (hopefully)
+    Microsoft::WRL::ComPtr<IMFSample> outputSample;
+    if (output.pSample) {
+        if (output.pSample == sample.Get()) {
+            outputSample = sample; // reuse sample
+        }
+        else {
+            outputSample.Attach(output.pSample);
+        }
+    }
 
-    if (!outputSample)
+    if (!outputSample) {
+        if (output.pEvents)
+            output.pEvents->Release();
         return false;
+    }
 
     Microsoft::WRL::ComPtr<IMFMediaBuffer> contiguous;
-
     hr = outputSample->ConvertToContiguousBuffer(&contiguous);
     if (FAILED(hr))
         return false;
 
     BYTE* data = nullptr;
-    DWORD maxLen = 0;
-    DWORD curLen = 0;
-
+    DWORD maxLen = 0, curLen = 0;
     hr = contiguous->Lock(&data, &maxLen, &curLen);
     if (FAILED(hr))
         return false;
 
     outFrame.data.assign(data, data + curLen);
-
     contiguous->Unlock();
 
     LONGLONG ts = 0;

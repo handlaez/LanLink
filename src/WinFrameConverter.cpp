@@ -147,14 +147,24 @@ bool WinFrameConverter::ConvertBgraToNv12(const ConversionParams& params) {
     srvDesc.Texture2D.MostDetailedMip = 0;
     srvDesc.Texture2D.MipLevels = 1;
 
-    Microsoft::WRL::ComPtr<ID3D11ShaderResourceView> inputSRV;
-    HRESULT hr = m_device->CreateShaderResourceView(pInputBgra, &srvDesc, &inputSRV);
-    if (FAILED(hr)) return false;
+    ID3D11ShaderResourceView* inputSRV = nullptr;
+    auto it = m_srvCache.find(pInputBgra);
+    if (it != m_srvCache.end()) {
+        inputSRV = it->second.Get();
+    }
+    else {
+        Microsoft::WRL::ComPtr<ID3D11ShaderResourceView> newSrv;
+        HRESULT hr = m_device->CreateShaderResourceView(pInputBgra, &srvDesc, &newSrv);
+        if (FAILED(hr)) return false;
+
+        inputSRV = newSrv.Get();
+        m_srvCache[pInputBgra] = newSrv;
+    }
 
     // bind
     m_context->CSSetShader(m_computeShader.Get(), nullptr, 0);
 
-    ID3D11ShaderResourceView* srvs[] = { inputSRV.Get() };
+    ID3D11ShaderResourceView* srvs[] = { inputSRV };
     m_context->CSSetShaderResources(0, 1, srvs);
 
     ID3D11UnorderedAccessView* uavs[] = { m_uavY.Get(), m_uavUV.Get() };

@@ -94,18 +94,18 @@ int main()
 
     UnifiedPacketizer packetizer;
     WinPacketSender packetSender;
-    if (!packetSender.Open("192.168.0.104", 5000)) {
+    if (!packetSender.Open("192.168.0.106", 5000)) {
         std::cerr << "Failed to open WinPacketSender socket.\n";
         return 1;
     }
 
     EncodedFrame encoded;
+    std::vector<Packet> packets;
 
     while (true)
     {
         VideoFrame bgraFrame{};
 
-        // Non-blocking frame acquisition (or short timeout depending on grabber implementation)
         if (grabber.CaptureFrame(bgraFrame))
         {
             ConversionParams params{};
@@ -120,11 +120,10 @@ int main()
 
                 if (encoder.ReceiveFrame(encoded))
                 {
-                    auto packets = packetizer.Packetize(encoded);
+                    packetizer.Packetize(encoded, packets);
                     for (const auto& packet : packets) {
                         packetSender.Send(packet.bytes);
                     }
-                    std::cout << "Sent " << packets.size() << " UDP packets (ts: " << encoded.timestamp << ")\n";
                 }
             }
 
