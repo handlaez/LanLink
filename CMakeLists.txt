@@ -24,6 +24,10 @@ set(HEADERS
     src/IFrameEncoder.hpp
     src/IPacketizer.hpp
     src/IPacketSender.hpp
+    src/IPacketReceiver.hpp
+    src/IFrameDecoder.hpp
+    src/IFrameRenderer.hpp
+    src/IDepacketizer.hpp
     src/WinFrameConverter.hpp
     src/WinFrameGrabber.hpp
     src/WinPacketSender.hpp
