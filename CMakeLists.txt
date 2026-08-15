@@ -17,6 +17,7 @@ set(SOURCES
     src/WinPacketSender.cpp 
     src/LnxPacketReceiver.cpp
     src/UnifiedDepacketizer.cpp
+    src/LnxFrameDecoder.cpp
 )
 
 set(HEADERS
@@ -35,6 +36,9 @@ set(HEADERS
     src/WinFrameGrabber.hpp
     src/WinPacketSender.hpp
     src/LnxPacketReceiver.hpp
+    src/LnxFrameDecoder.hpp
+    src/UnifiedPacketizer.hpp
+    src/UnifiedDepacketizer.hpp
 )
 
 add_executable(${PROJECT_NAME} ${SOURCES} ${HEADERS})
