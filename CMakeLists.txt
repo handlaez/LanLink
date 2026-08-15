@@ -18,7 +18,8 @@ set(SOURCES
     src/LnxPacketReceiver.cpp
     src/UnifiedDepacketizer.cpp
     src/LnxFrameDecoder.cpp
-)
+    src/LnxFrameRenderer.cpp
+    )
 
 set(HEADERS
     src/VideoFrame.hpp
