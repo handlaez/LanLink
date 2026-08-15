@@ -16,6 +16,7 @@ set(SOURCES
     src/WinFrameEncoder.cpp
     src/WinPacketSender.cpp 
     src/LnxPacketReceiver.cpp
+    src/UnifiedDepacketizer.cpp
 )
 
 set(HEADERS
