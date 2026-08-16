@@ -10,7 +10,7 @@
 #include <mftransform.h>
 #include <Mferror.h>
 
-#include "IFrameEncoder.hpp"
+#include "common/IFrameEncoder.hpp"
 
 class WinFrameEncoder : public IFrameEncoder
 {

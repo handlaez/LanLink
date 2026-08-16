@@ -1,7 +1,7 @@
 #ifndef LNX_PACKET_RECEIVER_HPP
 #define LNX_PACKET_RECEIVER_HPP
 
-#include "IPacketReceiver.hpp"
+#include "common/IPacketReceiver.hpp"
 
 class LnxPacketReceiver final : public IPacketReceiver {
 public:

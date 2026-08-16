@@ -4,7 +4,7 @@
 #include <WinSock2.h>
 #include <WS2tcpip.h>
 
-#include "IPacketSender.hpp"
+#include "common/IPacketSender.hpp"
 
 class WinPacketSender : public IPacketSender {
 public:

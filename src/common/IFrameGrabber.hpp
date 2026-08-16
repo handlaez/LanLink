@@ -2,7 +2,7 @@
 #define I_FRAME_GRABBER_HPP
 
 #include <cstdint>
-#include "VideoFrame.hpp"
+#include "common/VideoFrame.hpp"
 
 class IFrameGrabber {
 public:

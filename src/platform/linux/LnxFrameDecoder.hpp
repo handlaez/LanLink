@@ -1,7 +1,7 @@
 #ifndef LNX_FRAME_DECODER_HPP
 #define LNX_FRAME_DECODER_HPP
 
-#include "IFrameDecoder.hpp"
+#include "common/IFrameDecoder.hpp"
 
 extern "C" {
 #include <libavcodec/avcodec.h>

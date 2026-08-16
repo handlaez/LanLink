@@ -3,7 +3,7 @@
 
 #include <cstdint>
 
-#include "VideoFrame.hpp"
+#include "common/VideoFrame.hpp"
 
 struct ConversionParams {
     VideoFrame inputNativeResource;   // ID3D11Texture2D or VkImage/VkBuffer

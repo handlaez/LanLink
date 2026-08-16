@@ -1,7 +1,7 @@
 #ifndef I_FRAME_RENDERER_HPP
 #define I_FRAME_RENDERER_HPP
 
-#include "VideoFrame.hpp"
+#include "common/VideoFrame.hpp"
 
 class IFrameRenderer {
 public:

@@ -5,7 +5,7 @@
 #include <cstddef>
 #include <optional>
 
-#include "EncodedFrame.hpp"
+#include "common/EncodedFrame.hpp"
 
 class IDepacketizer {
 public:

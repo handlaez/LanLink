@@ -4,8 +4,8 @@
 #include <cstdint>
 #include <cstddef>
 #include <vector>
-#include "IPacketizer.hpp"
-#include "EncodedFrame.hpp"
+#include "common/IPacketizer.hpp"
+#include "common/EncodedFrame.hpp"
 
 class UnifiedPacketizer
 {

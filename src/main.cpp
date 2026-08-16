@@ -3,11 +3,13 @@
 #include <fstream>
 #include <chrono>
 
-#include "WinFrameGrabber.hpp"
-#include "WinFrameConverter.hpp"
-#include "WinFrameEncoder.hpp"
-#include "UnifiedPacketizer.hpp"
-#include "WinPacketSender.hpp"
+#include "platform/windows/WinFrameGrabber.hpp"
+#include "platform/windows/WinFrameConverter.hpp"
+#include "platform/windows/WinFrameEncoder.hpp"
+#include "common/UnifiedPacketizer.hpp"
+#include "platform/windows/WinPacketSender.hpp"
+
+// all this is temporary
 
 uint64_t now100ns()
 {

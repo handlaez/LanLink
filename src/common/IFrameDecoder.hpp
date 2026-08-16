@@ -1,8 +1,8 @@
 #ifndef I_FRAME_DECODER_HPP
 #define I_FRAME_DECODER_HPP
 
-#include "EncodedFrame.hpp"
-#include "VideoFrame.hpp"
+#include "common/EncodedFrame.hpp"
+#include "common/VideoFrame.hpp"
 
 class IFrameDecoder {
 public:

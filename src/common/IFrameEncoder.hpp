@@ -4,8 +4,8 @@
 #include <cstdint>
 #include <vector>
 
-#include "VideoFrame.hpp"
-#include "EncodedFrame.hpp"
+#include "common/VideoFrame.hpp"
+#include "common/EncodedFrame.hpp"
 
 class IFrameEncoder {
 public:

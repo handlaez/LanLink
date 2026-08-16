@@ -1,7 +1,7 @@
 #ifndef LNX_FRAME_RENDERER_HPP
 #define LNX_FRAME_RENDERER_HPP
 
-#include "IFrameRenderer.hpp"
+#include "common/IFrameRenderer.hpp"
 
 struct SDL_Window;
 struct SDL_Renderer;

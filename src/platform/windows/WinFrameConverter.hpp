@@ -6,7 +6,7 @@
 #include <stdexcept>
 #include <unordered_map>
 
-#include "IFrameConverter.hpp"
+#include "common/IFrameConverter.hpp"
 
 class WinFrameConverter final : public IFrameConverter {
 public:
