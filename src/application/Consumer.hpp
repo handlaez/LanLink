@@ -15,7 +15,7 @@ private:
 	LnxPacketReceiver receiver_;
 	UnifiedDepacketizer depacketizer_;
 	LnxFrameDecoder decoder_;
-	LnxFrameRenderer renderer;
+	LnxFrameRenderer renderer_;
 
 	bool rendererInitialized_;
 };
