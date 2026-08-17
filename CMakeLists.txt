@@ -9,8 +9,6 @@ set(CMAKE_CXX_EXTENSIONS OFF)
 set(COMMON_SOURCES
     src/common/UnifiedPacketizer.cpp
     src/common/UnifiedDepacketizer.cpp
-    src/application/Producer.cpp
-    src/application/Consumer.cpp
 )
 
 set(COMMON_HEADERS
@@ -33,6 +31,7 @@ if(WIN32)
         src/platform/windows/WinFrameConverter.cpp
         src/platform/windows/WinFrameEncoder.cpp
         src/platform/windows/WinPacketSender.cpp
+        src/application/Producer.cpp
     )
 
     set(PLATFORM_HEADERS
@@ -40,6 +39,7 @@ if(WIN32)
         src/platform/windows/WinFrameConverter.hpp
         src/platform/windows/WinFrameEncoder.hpp
         src/platform/windows/WinPacketSender.hpp
+        src/application/Producer.hpp
     )
 
     add_executable(${PROJECT_NAME}
@@ -81,12 +81,14 @@ else()
         src/platform/linux/LnxPacketReceiver.cpp
         src/platform/linux/LnxFrameDecoder.cpp
         src/platform/linux/LnxFrameRenderer.cpp
+        src/application/Consumer.cpp
     )
 
     set(PLATFORM_HEADERS
         src/platform/linux/LnxPacketReceiver.hpp
         src/platform/linux/LnxFrameDecoder.hpp
         src/platform/linux/LnxFrameRenderer.hpp
+        src/application/Consumer.hpp
     )
 
     find_package(PkgConfig REQUIRED)
