@@ -1,12 +1,11 @@
-#include "LnxFrameRenderer.hpp"
-
 #include <SDL2/SDL.h>
+#include <iostream>
 
 extern "C" {
 #include <libavutil/frame.h>
 }
 
-#include <iostream>
+#include "LnxFrameRenderer.hpp"
 
 LnxFrameRenderer::~LnxFrameRenderer()
 {
@@ -38,10 +37,7 @@ bool LnxFrameRenderer::initialize(
     }
 
     if (SDL_Init(SDL_INIT_VIDEO) != 0) {
-        std::cerr
-            << "SDL_Init failed: "
-            << SDL_GetError()
-            << '\n';
+        std::cerr << "SDL_Init failed: " << SDL_GetError() << '\n';
 
         return false;
     }
@@ -55,10 +51,7 @@ bool LnxFrameRenderer::initialize(
         SDL_WINDOW_FULLSCREEN_DESKTOP);
 
     if (!m_window) {
-        std::cerr
-            << "SDL_CreateWindow failed: "
-            << SDL_GetError()
-            << '\n';
+        std::cerr << "SDL_CreateWindow failed: " << SDL_GetError()  '\n';
 
         SDL_Quit();
         return false;
@@ -70,10 +63,7 @@ bool LnxFrameRenderer::initialize(
         SDL_RENDERER_ACCELERATED);
 
     if (!m_renderer) {
-        std::cerr
-            << "SDL_CreateRenderer failed: "
-            << SDL_GetError()
-            << '\n';
+        std::cerr << "SDL_CreateRenderer failed: " << SDL_GetError() << '\n';
 
         SDL_DestroyWindow(m_window);
         m_window = nullptr;
@@ -94,8 +84,7 @@ void LnxFrameRenderer::render(const VideoFrame& frame)
         return;
     }
 
-    auto* avFrame =
-        static_cast<AVFrame*>(frame.nativeResource);
+    auto* avFrame = static_cast<AVFrame*>(frame.nativeResource);
 
     if (!avFrame ||
         avFrame->data[0] == nullptr ||
@@ -121,11 +110,7 @@ void LnxFrameRenderer::render(const VideoFrame& frame)
             static_cast<int>(frame.height));
 
         if (!m_texture) {
-            std::cerr
-                << "SDL_CreateTexture failed: "
-                << SDL_GetError()
-                << '\n';
-
+            std::cerr << "SDL_CreateTexture failed: " << SDL_GetError() << '\n';
             return;
         }
 
@@ -145,11 +130,7 @@ void LnxFrameRenderer::render(const VideoFrame& frame)
 
     SDL_RenderClear(m_renderer);
 
-    SDL_RenderCopy(
-        m_renderer,
-        m_texture,
-        nullptr,
-        nullptr);
+    SDL_RenderCopy(m_renderer, m_texture, nullptr, nullptr);
 
     SDL_RenderPresent(m_renderer);
 }

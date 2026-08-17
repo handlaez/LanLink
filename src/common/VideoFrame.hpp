@@ -1,6 +1,8 @@
 #ifndef VIDEO_FRAME_HPP
 #define VIDEO_FRAME_HPP
 
+#include <cstdint>
+
 struct VideoFrame {
 	void* nativeResource = nullptr;
 	uint32_t width = 0;
