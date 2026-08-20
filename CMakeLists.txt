@@ -104,7 +104,12 @@ add_executable(${PROJECT_NAME}
 qt_add_qml_module(${PROJECT_NAME}
     URI LanLinkApp
     VERSION 1.0
-    QML_FILES Main.qml
+    RESOURCE_PREFIX "qt/qml/"
+    QML_FILES 
+        Main.qml
+    SOURCES
+        src/application/AppController.hpp
+        src/application/AppController.cpp
 )
 
 target_include_directories(${PROJECT_NAME}
@@ -112,6 +117,7 @@ target_include_directories(${PROJECT_NAME}
         ${CMAKE_CURRENT_SOURCE_DIR}/src
         ${CMAKE_CURRENT_SOURCE_DIR}/include
         ${CMAKE_CURRENT_SOURCE_DIR}/third_party
+        ${CMAKE_CURRENT_SOURCE_DIR}/src/application
 )
 
 target_link_libraries(${PROJECT_NAME}

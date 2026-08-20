@@ -1,40 +1,28 @@
-#include <cstdint>
-#include <iostream>
+#include <QGuiApplication>
+#include <QQmlApplicationEngine>
+#include <QDebug>
+#include <QDirIterator>
 
-#ifdef _WIN32
-#include "application/Producer.hpp"
-#else
-#include "application/Consumer.hpp"
-#endif
-
-int main()
+int main(int argc, char* argv[])
 {
-#ifdef _WIN32
-    constexpr const char* destinationAddress = "192.168.0.100";
-    constexpr uint16_t destinationPort = 5000;
+    QGuiApplication app(argc, argv);
 
-    Producer app;
+    QQmlApplicationEngine engine;
 
-    if (!app.initialize(destinationAddress, destinationPort)) {
-        std::cerr << "Failed to initialize Producer.\n";
-        return 1;
+    QObject::connect(
+        &engine,
+        &QQmlApplicationEngine::objectCreationFailed,
+        &app,
+        []() { QCoreApplication::exit(-1); },
+        Qt::QueuedConnection
+    );
+
+    engine.loadFromModule("LanLinkApp", "Main");
+
+    if (engine.rootObjects().isEmpty()) {
+        qCritical() << "Failed to load QML module LanLinkApp/Main";
+        return -1;
     }
 
-    app.run();
-
-#else
-    constexpr uint16_t listenPort = 5000;
-
-    Consumer app;
-
-    if (!app.initialize(listenPort)) {
-        std::cerr << "Failed to initialize Consumer.\n";
-        return 1;
-    }
-
-    app.run();
-
-#endif
-
-    return 0;
+    return app.exec();
 }

@@ -1,14 +1,37 @@
 import QtQuick
 import QtQuick.Controls
+import LanLinkApp
 
 Window {
-    width: 800
-    height: 600
+    width: 400
+    height: 300
     visible: true
-    title: "LanLink"
+    title: "LanLink Streamer"
 
-    Text {
+    AppController {
+        id: controller
+    }
+
+    Column {
         anchors.centerIn: parent
-        text: "LanLink UI Ready!"
+        spacing: 10
+
+        Text {
+            text: "Status: " + controller.statusText
+            font.pixelSize: 16
+            anchors.horizontalCenter: parent.horizontalCenter
+        }
+
+        Button {
+            text: controller.isStreaming ? "Stop" : "Start"
+            anchors.horizontalCenter: parent.horizontalCenter
+            onClicked: {
+                if (controller.isStreaming) {
+                    controller.stop()
+                } else {
+                    controller.start("192.168.0.100", 5000)
+                }
+            }
+        }
     }
 }
