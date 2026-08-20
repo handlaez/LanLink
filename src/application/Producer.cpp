@@ -123,7 +123,7 @@ bool Producer::initialize(const std::string& address, uint16_t port)
     return true;
 }
 
-void Producer::run()
+void Producer::run(std::atomic<bool>& running)
 {
     if (!frameConverter_ || !frameEncoder_) {
         std::cerr << "Producer is not initialized.\n";
@@ -133,10 +133,11 @@ void Producer::run()
     EncodedFrame encoded;
     std::vector<Packet> packets;
 
-    while (true) {
+    while (running.load(std::memory_order_relaxed)) {
         VideoFrame bgraFrame{};
 
         if (!frameGrabber_.CaptureFrame(bgraFrame)) {
+            std::this_thread::sleep_for(std::chrono::milliseconds(2));
             continue;
         }
 
@@ -149,7 +150,8 @@ void Producer::run()
 
             frameEncoder_->SubmitFrame(nv12Frame_);
 
-            Sleep(16);
+            // yes, a very crude way of doing that. It's temporary.
+            std::this_thread::sleep_for(std::chrono::milliseconds(16));
 
             if (frameEncoder_->ReceiveFrame(encoded)) {
                 packetizer_.Packetize(encoded, packets);

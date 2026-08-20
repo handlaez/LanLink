@@ -4,6 +4,7 @@
 #include <cstdint>
 #include <string>
 #include <memory>
+#include <atomic>
 
 // temporarily here:
 #include <d3d11.h>
@@ -19,7 +20,7 @@
 class Producer {
 public:
 	bool initialize(const std::string& address, uint16_t port);
-	void run();
+	void run(std::atomic<bool>& running);
 
 private:
 	WinFrameGrabber frameGrabber_;

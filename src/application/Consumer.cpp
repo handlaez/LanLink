@@ -1,3 +1,4 @@
+#include "Consumer.hpp"
 #include "application/Consumer.hpp"
 
 #include <cstdint>
@@ -20,7 +21,7 @@ bool Consumer::initialize(uint16_t port)
     return true;
 }
 
-void Consumer::run()
+void Consumer::run(const std::atomic<bool>& running)
 {
     std::vector<uint8_t> packetBuffer(1500);
 

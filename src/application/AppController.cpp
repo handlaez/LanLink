@@ -19,6 +19,7 @@ void AppController::start(const QString& ip, int port) {
     std::string ipStd = ip.toStdString();
     uint16_t portNum = static_cast<uint16_t>(port);
 
+    running_.store(true);
     workerThread_ = QThread::create([this, ipStd, portNum]() {
 #ifdef _WIN32
         Producer app;
@@ -30,7 +31,7 @@ void AppController::start(const QString& ip, int port) {
             return;
         }
         QMetaObject::invokeMethod(this, [this]() { setStatusText("Streaming..."); });
-        app.run();
+        app.run(running_);
 #else
         Consumer app;
         if (!app.initialize(portNum)) {
@@ -56,9 +57,10 @@ void AppController::start(const QString& ip, int port) {
 void AppController::stop() {
     if (!isStreaming_ || !workerThread_) return;
 
-    workerThread_->requestInterruption();
-    workerThread_->quit();
-    workerThread_->wait();
+    running_.store(false);
+    if (workerThread_) {
+        workerThread_->wait();
+    }
 
     delete workerThread_;
     workerThread_ = nullptr;

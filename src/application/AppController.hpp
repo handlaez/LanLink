@@ -5,6 +5,7 @@
 #include <QThread>
 #include <QString>
 #include <qqmlintegration.h>
+#include <atomic>
 
 #ifdef _WIN32
 #include "Producer.hpp"
@@ -35,6 +36,8 @@ signals:
 private:
     void setStreaming(bool streaming);
     void setStatusText(const QString& text);
+
+    std::atomic<bool> running_{ false };
 
     QThread* workerThread_ = nullptr;
     bool isStreaming_ = false;
