@@ -6,7 +6,8 @@
             "generator": "Visual Studio 17 2022",
             "binaryDir": "${sourceDir}/build",
             "cacheVariables": {
-                "CMAKE_TOOLCHAIN_FILE": "$env{VCPKG_ROOT}/scripts/buildsystems/vcpkg.cmake"
+                "CMAKE_TOOLCHAIN_FILE": "D:/Dev/vcpkg/scripts/buildsystems/vcpkg.cmake",
+                "CMAKE_PREFIX_PATH": "C:/Qt/6.11.2/msvc2022_64"
             }
         }
     ]

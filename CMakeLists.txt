@@ -6,6 +6,17 @@ set(CMAKE_CXX_STANDARD 20)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_CXX_EXTENSIONS OFF)
 
+# Enable Qt MOC/RCC build tools
+set(CMAKE_AUTOMOC ON)
+set(CMAKE_AUTORCC ON)
+
+if(MSVC)
+    add_compile_options(/Zc:__cplusplus)
+endif()
+
+find_package(Qt6 REQUIRED COMPONENTS Quick)
+
+# --- Common Sources ---
 set(COMMON_SOURCES
     src/common/UnifiedPacketizer.cpp
     src/common/UnifiedDepacketizer.cpp
@@ -24,8 +35,8 @@ set(COMMON_HEADERS
     src/common/IFrameRenderer.hpp
 )
 
+# --- Platform Specific Configurations ---
 if(WIN32)
-
     set(PLATFORM_SOURCES
         src/platform/windows/WinFrameGrabber.cpp
         src/platform/windows/WinFrameConverter.cpp
@@ -42,41 +53,17 @@ if(WIN32)
         src/application/Producer.hpp
     )
 
-    add_executable(${PROJECT_NAME}
-        src/main.cpp
-        ${COMMON_SOURCES}
-        ${COMMON_HEADERS}
-        ${PLATFORM_SOURCES}
-        ${PLATFORM_HEADERS}
+    set(PLATFORM_LIBS
+        d3d11
+        dxgi
+        d3dcompiler
+        ws2_32
+        mfplat
+        mf
+        mfreadwrite
+        mfuuid
     )
-
-    target_include_directories(${PROJECT_NAME}
-        PRIVATE
-            ${CMAKE_CURRENT_SOURCE_DIR}/src
-            ${CMAKE_CURRENT_SOURCE_DIR}/include
-            ${CMAKE_CURRENT_SOURCE_DIR}/third_party
-    )
-
-    target_compile_definitions(${PROJECT_NAME}
-        PRIVATE
-            WIN32_LEAN_AND_MEAN
-            NOMINMAX
-    )
-
-    target_link_libraries(${PROJECT_NAME}
-        PRIVATE
-            d3d11
-            dxgi
-            d3dcompiler
-            ws2_32
-            mfplat
-            mf
-            mfreadwrite
-            mfuuid
-    )
-
 else()
-
     set(PLATFORM_SOURCES
         src/platform/linux/LnxPacketReceiver.cpp
         src/platform/linux/LnxFrameDecoder.cpp
@@ -92,32 +79,59 @@ else()
     )
 
     find_package(PkgConfig REQUIRED)
-
     pkg_check_modules(SDL2 REQUIRED IMPORTED_TARGET sdl2)
     pkg_check_modules(FFMPEG REQUIRED IMPORTED_TARGET
         libavcodec
         libavutil
     )
 
-    add_executable(${PROJECT_NAME}
-        src/main.cpp
-        ${COMMON_SOURCES}
-        ${COMMON_HEADERS}
-        ${PLATFORM_SOURCES}
-        ${PLATFORM_HEADERS}
+    set(PLATFORM_LIBS
+        PkgConfig::SDL2
+        PkgConfig::FFMPEG
     )
+endif()
 
-    target_include_directories(${PROJECT_NAME}
+# --- Executable Setup ---
+add_executable(${PROJECT_NAME}
+    src/main.cpp
+    ${COMMON_SOURCES}
+    ${COMMON_HEADERS}
+    ${PLATFORM_SOURCES}
+    ${PLATFORM_HEADERS}
+)
+
+# Qt Quick Module
+qt_add_qml_module(${PROJECT_NAME}
+    URI LanLinkApp
+    VERSION 1.0
+    QML_FILES Main.qml
+)
+
+target_include_directories(${PROJECT_NAME}
+    PRIVATE
+        ${CMAKE_CURRENT_SOURCE_DIR}/src
+        ${CMAKE_CURRENT_SOURCE_DIR}/include
+        ${CMAKE_CURRENT_SOURCE_DIR}/third_party
+)
+
+target_link_libraries(${PROJECT_NAME}
+    PRIVATE
+        Qt6::Quick
+        ${PLATFORM_LIBS}
+)
+
+if(WIN32)
+    target_compile_definitions(${PROJECT_NAME}
         PRIVATE
-            ${CMAKE_CURRENT_SOURCE_DIR}/src
-            ${CMAKE_CURRENT_SOURCE_DIR}/include
-            ${CMAKE_CURRENT_SOURCE_DIR}/third_party
+            WIN32_LEAN_AND_MEAN
+            NOMINMAX
     )
+endif()
 
-    target_link_libraries(${PROJECT_NAME}
-        PRIVATE
-            PkgConfig::SDL2
-            PkgConfig::FFMPEG
+# Qt .dll copy
+if(WIN32)
+    add_custom_command(TARGET ${PROJECT_NAME} POST_BUILD
+        COMMAND ${CMAKE_COMMAND} -E env PATH="${Qt6_DIR}/../../../bin"
+        windeployqt --qmldir ${CMAKE_CURRENT_SOURCE_DIR} $<TARGET_FILE:${PROJECT_NAME}>
     )
-
 endif()
