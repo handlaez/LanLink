@@ -1,6 +1,8 @@
-#include "WinFrameConverter.hpp"
 #include <d3dcompiler.h>
 #include <iostream>
+
+#include "WinFrameConverter.hpp"
+#include "Logger.hpp"
 
 // HLSL Shader Source embedded as a raw string literal
 static const char* g_BgraToNv12ShaderSource = R"(
@@ -54,7 +56,7 @@ bool WinFrameConverter::Initialize(uint32_t width, uint32_t height) {
         return true;
     }
     catch (const std::exception& e) {
-        std::cerr << "WinFrameConverter: " << e.what() << ".\n";
+        logger().error(QString("WinFrameConverter: %1").arg(e.what()));
         return false;
     }
 }
@@ -135,7 +137,7 @@ bool WinFrameConverter::ConvertBgraToNv12(const ConversionParams& params) {
             RecreateViewsForOutput(pOutputNv12);
         }
         catch (const std::exception& e) {
-            std::cerr << "[WinFrameConverter Error] " << e.what() << "\n";
+            logger().error(QString("[WinFrameConverter Error]: %1").arg(e.what()));
             return false;
         }
     }

@@ -1,4 +1,5 @@
 #include "WinFrameGrabber.hpp"
+#include "Logger.hpp"
 
 #include <iostream> 
 
@@ -21,7 +22,7 @@ bool WinFrameGrabber::Initialize()
 		&context_);
 
 	if (FAILED(hr)) {
-		std::cerr << "D3D11CreateDevice failed\n";
+		logger().error("D3D11CreateDevice failed");
 		return false;
 	}
 
@@ -35,7 +36,7 @@ bool WinFrameGrabber::Initialize()
 	hr = adapter->EnumOutputs(0, &output);
 
 	if (FAILED(hr)) {
-		std::cerr << "EnumOutputs failed\n";
+		logger().error("EnumOutputs failed");
 		return false;
 	}
 
@@ -51,11 +52,11 @@ bool WinFrameGrabber::Initialize()
 	hr = output1->DuplicateOutput(device_.Get(), &duplication_);
 
 	if (FAILED(hr)) {
-		std::cerr << "DuplicateOutput failed\n";
+		logger().error("DuplicateOutput failed");
 		return false;
 	}
 
-	std::cout << "Desktop duplication initialized: " << width << "x" << height << std::endl;
+	logger().info(QString("Desktop duplication initialized: %1 x %2").arg(width).arg(height));
 
 	return true;
 }
@@ -76,11 +77,11 @@ bool WinFrameGrabber::CaptureFrame(VideoFrame& outFrame)
 	}
 
 	if (frameInfo.ProtectedContentMaskedOut) {
-		std::cout << "DRM detected -> captured screen might be black.\n";
+		logger().warn("DRM detected -> captured screen might be black.");
 	}
 
 	if (FAILED(hr)) {
-		std::cerr << "AcquireNextFrame failed\n";
+		logger().error("AcquireNextFrame failed");
 		return false;
 	}
 

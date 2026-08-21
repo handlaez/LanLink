@@ -1,4 +1,5 @@
 #include "Producer.hpp"
+#include "Logger.hpp"
 
 #include <chrono>
 #include <iostream>
@@ -75,21 +76,21 @@ namespace {
 bool Producer::initialize(const std::string& address, uint16_t port)
 {
     if (!frameGrabber_.Initialize()) {
-        std::cerr << "Failed to initialize frame grabber.\n";
+        logger().error("Failed to initialize frame grabber.");
         return false;
     }
 
     if (!queryFrameDimensions(frameGrabber_, width_, height_)) {
-        std::cerr << "Failed to determine frame dimensions.\n";
+        logger().error("Failed to determine frame dimensions.");
         return false;
     }
 
-    std::cout << "Width: " << width_ << " Height: " << height_ << '\n';
+    logger().info(QString("Width: %1 Height: %2").arg(width_).arg(height_));
 
     nv12Texture_ = createNv12Texture(frameGrabber_.getDevice(), width_, height_);
 
     if (!nv12Texture_) {
-        std::cerr << "Failed to create GPU NV12 texture.\n";
+        logger().error("Failed to create GPU NV12 texture.");
         return false;
     }
 
@@ -102,7 +103,7 @@ bool Producer::initialize(const std::string& address, uint16_t port)
         frameGrabber_.getContext());
 
     if (!frameConverter_->Initialize(width_, height_)) {
-        std::cerr << "Failed to initialize frame converter.\n";
+        logger().error("Failed to initialize frame converter.");
         return false;
     }
 
@@ -111,14 +112,16 @@ bool Producer::initialize(const std::string& address, uint16_t port)
         frameGrabber_.getContext());
 
     if (!frameEncoder_->Initialize(width_, height_, 60, 8'000'000)) {
-        std::cerr << "Failed to initialize frame encoder.\n";
+        logger().error("Failed to initialize frame encoder.");
         return false;
     }
 
     if (!packetSender_.Open(address, port)) {
-        std::cerr << "Failed to open packet sender.\n";
+        logger().error("Failed to open packet sender.");
         return false;
     }
+
+    logger().info(QString("Streaming at %1:%2").arg(address).arg(port));
 
     return true;
 }
@@ -126,7 +129,7 @@ bool Producer::initialize(const std::string& address, uint16_t port)
 void Producer::run(std::atomic<bool>& running)
 {
     if (!frameConverter_ || !frameEncoder_) {
-        std::cerr << "Producer is not initialized.\n";
+        logger().error("Producer is not initialized.");
         return;
     }
 
@@ -164,4 +167,6 @@ void Producer::run(std::atomic<bool>& running)
 
         frameGrabber_.ReleaseFrame();
     }
+
+    logger().info("Streaming halted.\n");
 }

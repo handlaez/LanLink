@@ -4,8 +4,8 @@ import QtQuick.Layouts
 import LanLinkApp
 
 Window {
-    width: 400
-    height: 300
+    width: 480
+    height: 640
     visible: true
     title: "LanLink"
     color: "#1e1e1e"
@@ -15,9 +15,9 @@ Window {
     }
 
     ColumnLayout {
-        anchors.centerIn: parent
-        spacing: 12
-        width: 280
+        anchors.fill: parent
+        anchors.margins: 24
+        spacing: 16
 
         Text {
             text: "Status: " + controller.statusText
@@ -55,6 +55,55 @@ Window {
                     controller.stop()
                 } else {
                     controller.start(ipInput.text, parseInt(portInput.text))
+                }
+            }
+        }
+
+        Rectangle {
+            Layout.fillWidth: true
+            Layout.fillHeight: true
+            Layout.minimumHeight: 100
+
+            color: "#111111"
+            radius: 4
+            clip: true
+
+            Flickable {
+                id: logFlickable
+
+                anchors.fill: parent
+                anchors.margins: 6
+
+                clip: true
+
+                contentWidth: logText.width
+                contentHeight: logText.height
+
+                boundsBehavior: Flickable.StopAtBounds
+
+                Text {
+                    id: logText
+
+                    width: Math.max(logFlickable.width, implicitWidth)
+                    height: implicitHeight
+
+                    text: controller.logLines.join("\n")
+
+                    color: "#dddddd"
+                    font.family: "Consolas"
+                    font.pixelSize: 12
+
+                    wrapMode: Text.NoWrap
+                }
+
+                Connections {
+                    target: controller
+
+                    function onLogLinesChanged() {
+                        Qt.callLater(function() {
+                            logFlickable.contentY = Math.max(0, logFlickable.contentHeight - logFlickable.height )
+                        })
+                    }
                 }
             }
         }

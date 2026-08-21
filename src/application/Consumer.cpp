@@ -8,12 +8,12 @@
 bool Consumer::initialize(uint16_t port)
 {
     if (!receiver_.initialize(port)) {
-        std::cerr << "Failed to initialize packet receiver.\n";
+        logger().error("Failed to initialize packet receiver.");
         return false;
     }
 
     if (!decoder_.initialize()) {
-        std::cerr << "Failed to initialize frame decoder.\n";
+        logger().error("Failed to initialize frame decoder.");
         receiver_.close();
         return false;
     }
@@ -29,7 +29,7 @@ void Consumer::run(const std::atomic<bool>& running)
         const int packetSize = receiver_.receivePacket(packetBuffer.data(), packetBuffer.size());
 
         if (packetSize < 0) {
-            std::cerr << "Packet receiver error.\n";
+            logger().error("Packet receiver error.");
             break;
         }
 
@@ -44,7 +44,7 @@ void Consumer::run(const std::atomic<bool>& running)
         }
 
         if (!decoder_.sendPacket(*encodedFrame)) {
-            std::cerr << "Failed to send encoded frame to decoder.\n";
+            logger().error("Failed to send encoded frame to decoder.");
             continue;
         }
 
@@ -54,7 +54,7 @@ void Consumer::run(const std::atomic<bool>& running)
             if (!rendererInitialized_) {
                 if (!renderer_.initialize(static_cast<int>(decodedFrame.width), static_cast<int>(decodedFrame.height), "LanLink")) 
                 {
-                    std::cerr << "Failed to initialize frame renderer.\n";
+                    logger().error("Failed to initialize frame renderer.");
                     return;
                 }
 

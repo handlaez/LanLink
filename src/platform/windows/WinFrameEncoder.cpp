@@ -1,5 +1,6 @@
 #include <iostream>
 
+#include "Logger.hpp"
 #include "WinFrameEncoder.hpp"
 
 WinFrameEncoder::WinFrameEncoder(ID3D11Device* device, ID3D11DeviceContext* context)
@@ -24,13 +25,13 @@ bool WinFrameEncoder::Initialize(uint32_t width, uint32_t height, uint32_t fps, 
 
     HRESULT hr = MFStartup(MF_VERSION);
     if (FAILED(hr)) {
-        std::cerr << "MFStartup failed: 0x" << std::hex << hr << std::dec << '\n';
+        logger().error(QString("MFStartup failed: 0x%1").arg(hr, 0, 16));
         return false;
     }
 
     hr = MFCreateDXGIDeviceManager(&dxgiResetToken_, &dxgiManager_);
     if (FAILED(hr)) {
-        std::cerr << "MFCreateDXGIDeviceManager failed\n";
+        logger().error("MFCreateDXGIDeviceManager failed");
         return false;
     }
 
@@ -41,14 +42,13 @@ bool WinFrameEncoder::Initialize(uint32_t width, uint32_t height, uint32_t fps, 
         multithread->SetMultithreadProtected(TRUE);
     }
     else {
-        std::cerr << "Failed to enable D3D11 multithread protection: 0x"
-            << std::hex << hr << std::dec << '\n';
+        logger().error(QString("Failed to enable D3D11 multithread protection: 0x%1").arg(hr, 0, 16));
         return false;
     }
 
     hr = dxgiManager_->ResetDevice(device_.Get(), dxgiResetToken_);
     if (FAILED(hr)) {
-        std::cerr << "ResetDevice failed\n";
+        logger().error("ResetDevice failed.");
         return false;
     }
 
@@ -66,7 +66,7 @@ bool WinFrameEncoder::Initialize(uint32_t width, uint32_t height, uint32_t fps, 
     hr = MFTEnumEx(MFT_CATEGORY_VIDEO_ENCODER, MFT_ENUM_FLAG_HARDWARE, &inputInfo, &outputInfo, &activates, &count);
 
     if (FAILED(hr) || count == 0) {
-        std::cerr << "No hardware HEVC encoder found\n";
+        logger().error("No hardware HEVC encoder found");
         return false;
     }
 
@@ -98,13 +98,13 @@ bool WinFrameEncoder::Initialize(uint32_t width, uint32_t height, uint32_t fps, 
     CoTaskMemFree(activates);
 
     if (!encoderReady) {
-        std::cerr << "Failed to find an HEVC encoder compatible with this D3D11 device.\n";
+        logger().error("Failed to find an HEVC encoder compatible with this D3D11 device.");
         return false;
     }
 
     if (FAILED(hr))
     {
-        std::cerr << "MFT_MESSAGE_SET_D3D_MANAGER failed: 0x" << std::hex << hr << std::dec << '\n';
+        logger().error(QString("MFT_MESSAGE_SET_D3D_MANAGER failed: 0x%1").arg(hr, 0, 16));
         return false;
     }
 
@@ -125,7 +125,7 @@ bool WinFrameEncoder::Initialize(uint32_t width, uint32_t height, uint32_t fps, 
 
     hr = encoder_->SetOutputType(0, outType.Get(), 0);
     if (FAILED(hr)) {
-        std::cerr << "SetOutputType failed: 0x" << std::hex << hr << std::dec << '\n';
+        logger().error(QString("SetOutputType failed: 0x%1").arg(hr, 0, 16));
         return false;
     }
 
@@ -145,8 +145,7 @@ bool WinFrameEncoder::Initialize(uint32_t width, uint32_t height, uint32_t fps, 
 
     hr = encoder_->SetInputType(0, inType.Get(), 0);
     if (FAILED(hr)) {
-        std::cerr << "SetInputType failed: 0x"
-            << std::hex << hr << std::dec << '\n';
+        logger().error(QString("SetInputType failed: 0x%1").arg(hr, 0, 16));
         return false;
     }
 
@@ -156,12 +155,12 @@ bool WinFrameEncoder::Initialize(uint32_t width, uint32_t height, uint32_t fps, 
 
     hr = encoder_.As(&eventGenerator_);
     if (FAILED(hr)) {
-        std::cerr << "Failed to get IMFMediaEventGenerator: 0x" << std::hex << hr << std::dec << std::endl;
+        logger().error(QString("Failed to get IMFMediaEventGenerator: 0x%1").arg(hr, 0, 16));
         return false;
     }
 
     initialized_ = true;
-    std::cout << "Media Foundation HEVC encoder initialized\n";
+    logger().info("Media Foundation HEVC encoder initialized");
 
     return true;
 }
@@ -187,7 +186,7 @@ bool WinFrameEncoder::SubmitFrame(const VideoFrame& frame)
         return false;
 
     if (FAILED(hr)) {
-        std::cerr << "WinEncoder -- ProcessInput failed: 0x" << std::hex << hr << std::dec << std::endl;
+        logger().error(QString("WinEncoder ProcessInput failed: 0x%1").arg(hr, 0, 16));
         return false;
     }
 
@@ -203,7 +202,7 @@ bool WinFrameEncoder::ReceiveFrame(EncodedFrame& outFrame)
     MFT_OUTPUT_STREAM_INFO streamInfo{};
     HRESULT hr = encoder_->GetOutputStreamInfo(0, &streamInfo);
     if (FAILED(hr)) {
-        std::cerr << "GetOutputStreamInfo failed: 0x" << std::hex << hr << std::dec << '\n';
+        logger().error(QString("GetOutputStreamInfo failed: 0x%1").arg(hr, 0, 16));
         return false;
     }
 
@@ -238,7 +237,7 @@ bool WinFrameEncoder::ReceiveFrame(EncodedFrame& outFrame)
     }
 
     if (FAILED(hr)) {
-        //std::cerr << "ProcessOutput failed: 0x" << std::hex << hr << std::dec << '\n';
+        // logger().error(QString("ProcessOutput failed: 0x%1").arg(hr, 0, 16));
         return false;
     }
 
@@ -319,13 +318,13 @@ bool WinFrameEncoder::CreateInputSample(ID3D11Texture2D* texture, uint64_t times
     HRESULT hr = MFCreateDXGISurfaceBuffer( __uuidof(ID3D11Texture2D), texture, 0, FALSE, &buffer);
 
     if (FAILED(hr)) {
-        std::cerr << "MFCreateDXGISurfaceBuffer failed: 0x" << std::hex << hr << std::dec << '\n';
+        logger().error(QString("MFCreateDXGISurfaceBuffer failed: 0x%1").arg(hr, 0, 16));
         return false;
     }
 
     hr = MFCreateSample(sample);
     if (FAILED(hr)) {
-        std::cerr << "MFCreateSample failed: 0x" << std::hex << hr << std::dec << '\n';
+        logger().error(QString("MFCreateSample failed: 0x%1").arg(hr, 0, 16));
         return false;
     }
 

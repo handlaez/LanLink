@@ -3,8 +3,18 @@
 #include <qhostaddress.h>
 
 #include "AppController.hpp"
+#include "Logger.hpp"
 
-AppController::AppController(QObject* parent) : QObject(parent){}
+AppController::AppController(QObject* parent) : QObject(parent)
+{
+    connect(
+        &logger(),
+        &Logger::messageLogged,
+        this,
+        &AppController::appendLog,
+        Qt::QueuedConnection
+    );
+}
 
 AppController::~AppController()
 {
@@ -94,4 +104,16 @@ void AppController::setStatusText(const QString& text) {
         statusText_ = text;
         emit statusTextChanged();
     }
+}
+
+void AppController::appendLog(const QString& message)
+{
+    logLines_.append(message);
+
+    constexpr qsizetype maxLogLines = 1000;
+
+    if (logLines_.size() > maxLogLines)
+        logLines_.removeFirst();
+
+    emit logLinesChanged();
 }

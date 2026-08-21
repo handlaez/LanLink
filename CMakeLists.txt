@@ -14,12 +14,16 @@ if(MSVC)
     add_compile_options(/Zc:__cplusplus)
 endif()
 
-find_package(Qt6 REQUIRED COMPONENTS Quick)
+find_package(Qt6 REQUIRED COMPONENTS
+    Quick
+    QuickControls2
+)
 
 # --- Common Sources ---
 set(COMMON_SOURCES
     src/common/UnifiedPacketizer.cpp
     src/common/UnifiedDepacketizer.cpp
+    src/application/Logger.cpp
 )
 
 set(COMMON_HEADERS
@@ -33,6 +37,7 @@ set(COMMON_HEADERS
     src/common/IPacketReceiver.hpp
     src/common/IFrameDecoder.hpp
     src/common/IFrameRenderer.hpp
+    src/application/Logger.hpp
 )
 
 # --- Platform Specific Configurations ---
@@ -123,6 +128,7 @@ target_include_directories(${PROJECT_NAME}
 target_link_libraries(${PROJECT_NAME}
     PRIVATE
         Qt6::Quick
+        Qt6::QuickControls2
         ${PLATFORM_LIBS}
 )
 
@@ -132,6 +138,8 @@ if(WIN32)
             WIN32_LEAN_AND_MEAN
             NOMINMAX
     )
+
+    set_target_properties(${PROJECT_NAME} PROPERTIES WIN32_EXECUTABLE TRUE)
 endif()
 
 # Qt .dll copy
