@@ -1,6 +1,8 @@
 #ifndef CONSUMER_HPP
 #define CONSUMER_HPP
 
+#include <atomic>
+
 #include "platform/linux/LnxFrameDecoder.hpp"
 #include "platform/linux/LnxFrameRenderer.hpp"
 #include "platform/linux/LnxPacketReceiver.hpp"
@@ -9,7 +11,7 @@
 class Consumer {
 public:
 	bool initialize(uint16_t port);
-	void run();
+	void run(const std::atomic<bool>& running);
 
 private:
 	LnxPacketReceiver receiver_;

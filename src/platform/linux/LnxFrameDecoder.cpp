@@ -1,11 +1,11 @@
 #include "LnxFrameDecoder.hpp"
+#include "Logger.hpp"
 
 extern "C" {
 #include <libavcodec/avcodec.h>
 }
 
 #include <cstring>
-#include <iostream>
 
 LnxFrameDecoder::~LnxFrameDecoder()
 {
@@ -33,19 +33,19 @@ bool LnxFrameDecoder::initialize()
     const AVCodec* codec = avcodec_find_decoder(AV_CODEC_ID_HEVC);
 
     if (!codec) {
-        std::cerr << "HEVC decoder not found\n";
+        logger().error("HEVC decoder not found");
         return false;
     }
 
     m_context = avcodec_alloc_context3(codec);
 
     if (!m_context) {
-        std::cerr << "Failed to allocate decoder context\n";
+        logger().error("Failed to allocate decoder context");
         return false;
     }
 
     if (avcodec_open2(m_context, codec, nullptr) < 0) {
-        std::cerr << "Failed to open HEVC decoder\n";
+        logger().error("Failed to open HEVC decoder");
         avcodec_free_context(&m_context);
         return false;
     }
@@ -54,7 +54,7 @@ bool LnxFrameDecoder::initialize()
     m_frame = av_frame_alloc();
 
     if (!m_packet || !m_frame) {
-        std::cerr << "Failed to allocate FFmpeg packet/frame\n";
+        logger().error("Failed to allocate FFmpeg packet/frame");
 
         if (m_frame) {
             av_frame_free(&m_frame);

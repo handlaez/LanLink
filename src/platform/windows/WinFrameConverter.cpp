@@ -1,5 +1,4 @@
 #include <d3dcompiler.h>
-#include <iostream>
 
 #include "WinFrameConverter.hpp"
 #include "Logger.hpp"

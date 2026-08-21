@@ -65,7 +65,7 @@ void AppController::start(const QString& ip, int port) {
             return;
         }
         QMetaObject::invokeMethod(this, [this]() { setStatusText("Receiving..."); });
-        app.run();
+        app.run(running_);
 #endif
 
         QMetaObject::invokeMethod(this, [this]() {

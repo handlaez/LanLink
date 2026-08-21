@@ -1,8 +1,6 @@
 #include "WinFrameGrabber.hpp"
 #include "Logger.hpp"
 
-#include <iostream> 
-
 bool WinFrameGrabber::Initialize()
 {
 	HRESULT hr;

@@ -2,7 +2,6 @@
 #include "Logger.hpp"
 
 #include <chrono>
-#include <iostream>
 #include <ratio>
 #include <thread>
 #include <vector>

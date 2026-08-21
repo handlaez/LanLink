@@ -1,11 +1,11 @@
 #include <SDL2/SDL.h>
-#include <iostream>
 
 extern "C" {
 #include <libavutil/frame.h>
 }
 
 #include "LnxFrameRenderer.hpp"
+#include "Logger.hpp"
 
 LnxFrameRenderer::~LnxFrameRenderer()
 {
@@ -37,8 +37,7 @@ bool LnxFrameRenderer::initialize(
     }
 
     if (SDL_Init(SDL_INIT_VIDEO) != 0) {
-        std::cerr << "SDL_Init failed: " << SDL_GetError() << '\n';
-
+        logger().error(QString("SDL_Init failed: %1").arg(SDL_GetError()));
         return false;
     }
 
@@ -51,8 +50,7 @@ bool LnxFrameRenderer::initialize(
         SDL_WINDOW_FULLSCREEN_DESKTOP);
 
     if (!m_window) {
-        std::cerr << "SDL_CreateWindow failed: " << SDL_GetError()  '\n';
-
+        logger().error(QString("SDL_CreateWindow failed: %1").arg(SDL_GetError()));
         SDL_Quit();
         return false;
     }
@@ -63,8 +61,7 @@ bool LnxFrameRenderer::initialize(
         SDL_RENDERER_ACCELERATED);
 
     if (!m_renderer) {
-        std::cerr << "SDL_CreateRenderer failed: " << SDL_GetError() << '\n';
-
+        logger().error(QString("SDL_CreateRenderer failed: %1").arg(SDL_GetError()));
         SDL_DestroyWindow(m_window);
         m_window = nullptr;
 
@@ -110,7 +107,7 @@ void LnxFrameRenderer::render(const VideoFrame& frame)
             static_cast<int>(frame.height));
 
         if (!m_texture) {
-            std::cerr << "SDL_CreateTexture failed: " << SDL_GetError() << '\n';
+            logger().error(QString("SDL_CreateTexture failed: %1").arg(SDL_GetError()));
             return;
         }
 

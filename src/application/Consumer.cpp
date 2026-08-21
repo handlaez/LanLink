@@ -1,8 +1,6 @@
-#include "Consumer.hpp"
 #include "application/Consumer.hpp"
 
 #include <cstdint>
-#include <iostream>
 #include <vector>
 
 bool Consumer::initialize(uint16_t port)
@@ -18,6 +16,9 @@ bool Consumer::initialize(uint16_t port)
         return false;
     }
 
+    logger().info("Initialization successful.");
+    logger().info(QString("Listening on port: %1").arg(port));
+
     return true;
 }
 
@@ -25,7 +26,7 @@ void Consumer::run(const std::atomic<bool>& running)
 {
     std::vector<uint8_t> packetBuffer(1500);
 
-    while (renderer_.pollEvents()) {
+    while (running.load(std::memory_order_relaxed)) {
         const int packetSize = receiver_.receivePacket(packetBuffer.data(), packetBuffer.size());
 
         if (packetSize < 0) {

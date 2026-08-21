@@ -5,9 +5,7 @@
 #include <sys/select.h>
 #include <sys/socket.h>
 #include <unistd.h>
-
 #include <cerrno>
-#include <iostream>
 
 namespace {
     constexpr int kReceiveBufferSize = 8 * 1024 * 1024;
@@ -28,14 +26,14 @@ bool LnxPacketReceiver::initialize(uint16_t port)
 
     m_socket = socket(AF_INET, SOCK_DGRAM, 0);
     if (m_socket < 0) {
-        std::cerr << "Failed to create UDP socket\n";
+        logger().error("Failed to create UDP socket");
         return false;
     }
 
     int receiveBufferSize = kReceiveBufferSize;
 
     if (setsockopt( m_socket, SOL_SOCKET, SO_RCVBUF, &receiveBufferSize, sizeof(receiveBufferSize)) < 0) {
-        std::cerr << "Warning: failed to set SO_RCVBUF\n";
+        logger().warn("Failed to set SO_RCVBUF");
     }
 
     sockaddr_in address{};
@@ -47,14 +45,14 @@ bool LnxPacketReceiver::initialize(uint16_t port)
         m_socket,
         reinterpret_cast<sockaddr*>(&address),
         sizeof(address)) < 0) {
-        std::cerr << "Failed to bind UDP socket\n";
+        logger().error("Failed to bind UDP socket");
         close();
         return false;
     }
 
     const int flags = fcntl(m_socket, F_GETFL, 0);
     if (flags < 0 || fcntl(m_socket, F_SETFL, flags | O_NONBLOCK) < 0) {
-        std::cerr << "Failed to configure non-blocking UDP socket\n";
+        logger().error("Failed to configure non-blocking UDP socket");
         close();
         return false;
     }
