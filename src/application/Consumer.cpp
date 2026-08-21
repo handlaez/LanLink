@@ -66,4 +66,6 @@ void Consumer::run(const std::atomic<bool>& running)
             renderer_.render(decodedFrame);
         }
     }
+
+    logger().info("Receiving halted.\n");
 }
