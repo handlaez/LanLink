@@ -1,4 +1,5 @@
 #include "application/Consumer.hpp"
+#include "Logger.hpp"
 
 #include <cstdint>
 #include <vector>

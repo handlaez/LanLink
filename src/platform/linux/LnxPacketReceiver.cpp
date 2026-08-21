@@ -1,4 +1,5 @@
 #include "LnxPacketReceiver.hpp"
+#include "Logger.hpp"
 
 #include <arpa/inet.h>
 #include <fcntl.h>
