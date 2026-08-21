@@ -1,5 +1,6 @@
 #include <qmetaobject.h>
 #include <string>
+#include <qhostaddress.h>
 
 #include "AppController.hpp"
 
@@ -11,7 +12,19 @@ AppController::~AppController()
 }
 
 void AppController::start(const QString& ip, int port) {
-    if (isStreaming_) return;
+    if (isStreaming_) 
+        return;
+
+    QHostAddress address;
+    if (!address.setAddress(ip)) {
+        setStatusText("Invalid IP address.");
+        return;
+    }
+
+    if (port < 1 || port > 65535) {
+        setStatusText("Invalid port.");
+        return;
+    }
 
     setStatusText("Initializing...");
     setStreaming(true);
