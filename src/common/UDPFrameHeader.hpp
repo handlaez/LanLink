@@ -7,7 +7,7 @@
 #include <cstddef>
 #include <vector>
 
-inline constexpr size_t MaxDatagramSize = 1300;
+inline constexpr size_t MaxDatagramSize = 1200;
 
 #pragma pack(push, 1)
 struct UDPFrameHeader {

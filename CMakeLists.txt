@@ -28,6 +28,7 @@ set(COMMON_SOURCES
     src/common/UnifiedPacketizer.cpp
     src/common/UnifiedDepacketizer.cpp
     src/application/Logger.cpp
+    src/common/UnifiedFecCodec.cpp
 )
 
 set(COMMON_HEADERS
@@ -42,6 +43,7 @@ set(COMMON_HEADERS
     src/common/IFrameDecoder.hpp
     src/common/IFrameRenderer.hpp
     src/application/Logger.hpp
+    src/common/UnifiedFecCodec.hpp
 )
 
 # --- Platform Specific Configurations ---
