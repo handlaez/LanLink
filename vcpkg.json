@@ -3,6 +3,7 @@
     "version": "0.1.0",
     "builtin-baseline": "ea144429cd5bd97ea49279c3d016644953a03d50",
     "dependencies": [
-        "ffmpeg"
+        "ffmpeg",
+        "zfec"
     ]
 }

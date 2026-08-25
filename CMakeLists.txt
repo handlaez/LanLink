@@ -1,5 +1,7 @@
 cmake_minimum_required(VERSION 3.20)
 
+set(CMAKE_CONFIGURATION_TYPES "Debug;Release" CACHE STRING "Supported build types" FORCE)
+
 project(LanLink LANGUAGES CXX)
 
 set(CMAKE_CXX_STANDARD 20)
@@ -18,6 +20,8 @@ find_package(Qt6 REQUIRED COMPONENTS
     Quick
     QuickControls2
 )
+
+find_package(zfec CONFIG REQUIRED)
 
 # --- Common Sources ---
 set(COMMON_SOURCES
@@ -129,6 +133,7 @@ target_link_libraries(${PROJECT_NAME}
     PRIVATE
         Qt6::Quick
         Qt6::QuickControls2
+		zfec::zfec
         ${PLATFORM_LIBS}
 )
 
