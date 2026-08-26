@@ -115,6 +115,8 @@ bool Producer::initialize(const std::string& address, uint16_t port)
         return false;
     }
 
+    fecPacketizer_ = std::make_unique<FecPacketizer>(MaxDatagramSize - sizeof(UDPStreamHeader));
+
     if (!packetSender_.Open(address, port)) {
         logger().error("Failed to open packet sender.");
         return false;
@@ -127,13 +129,14 @@ bool Producer::initialize(const std::string& address, uint16_t port)
 
 void Producer::run(std::atomic<bool>& running)
 {
-    if (!frameConverter_ || !frameEncoder_) {
+    if (!frameConverter_ || !frameEncoder_ || !fecPacketizer_) {
         logger().error("Producer is not initialized.");
         return;
     }
 
     EncodedFrame encoded;
     std::vector<Packet> packets;
+    std::vector<Packet> fecPackets;
 
     while (running.load(std::memory_order_relaxed)) {
         VideoFrame bgraFrame{};
@@ -153,10 +156,12 @@ void Producer::run(std::atomic<bool>& running)
             frameEncoder_->SubmitFrame(nv12Frame_);
 
             // yes, a very crude way of doing that. It's temporary.
-            std::this_thread::sleep_for(std::chrono::milliseconds(16));
+            std::this_thread::sleep_for(std::chrono::milliseconds(8));
 
             if (frameEncoder_->ReceiveFrame(encoded)) {
                 packetizer_.Packetize(encoded, packets);
+
+                fecPacketizer_->Packetize(packets, fecPackets);
 
                 for (const auto& packet : packets) {
                     packetSender_.Send(packet.bytes);

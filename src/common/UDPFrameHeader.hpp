@@ -7,22 +7,11 @@
 #include <cstddef>
 #include <vector>
 
-inline constexpr size_t MaxDatagramSize = 1200;
-
-#pragma pack(push, 1)
-struct UDPFrameHeader {
-    uint64_t timestamp;
-    uint16_t packetIndex;
-    uint16_t packetCount;
-    uint32_t payloadSize;
-};
-#pragma pack(pop)
+inline constexpr std::size_t MaxDatagramSize = 1200;
 
 struct Packet {
     std::vector<uint8_t> bytes;
 };
-
-// --- FEC implemenntaiton
 
 #pragma pack(push, 1)
 struct UDPStreamHeader {
@@ -55,10 +44,7 @@ struct PacketSlot {
     // return a C++20 span viewing ONLY the payload data (no copy)
     [[nodiscard]] std::span<const std::byte> getPayload() const {
         const auto* header = getHeader();
-        return std::span(
-            buffer.data() + sizeof(UDPStreamHeader),
-            header->payloadSize
-        );
+        return std::span(buffer.data() + sizeof(UDPStreamHeader), header->payloadSize);
     }
 };
 

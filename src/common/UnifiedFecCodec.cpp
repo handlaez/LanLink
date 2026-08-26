@@ -3,6 +3,7 @@
 #include <algorithm>
 #include <stdexcept>
 #include <utility>
+#include <vector>
 
 extern "C" {
 #include <fec.h>
@@ -11,14 +12,14 @@ extern "C" {
 struct FecCodec::Impl {
     fec_t* fec = nullptr;
 
-    explicit Impl()
+    Impl(std::size_t dataShards, std::size_t parityShards)
     {
         fec_init();
 
-        fec = fec_new(
-            static_cast<unsigned short>(FecCodec::DataShards),
-            static_cast<unsigned short>(FecCodec::TotalShards)
-        );
+        const auto k = static_cast<unsigned short>(dataShards);
+        const auto n = static_cast<unsigned short>(dataShards + parityShards);
+
+        fec = fec_new(k, n);
 
         if (fec == nullptr) {
             throw std::runtime_error("fec_new() failed");
@@ -36,13 +37,29 @@ struct FecCodec::Impl {
     Impl& operator=(const Impl&) = delete;
 };
 
-FecCodec::FecCodec(std::size_t shardSize) : impl_(nullptr), shardSize_(shardSize)
+FecCodec::FecCodec(std::size_t shardSize, std::size_t dataShards, std::size_t parityShards)
+    : impl_(nullptr), shardSize_(shardSize), dataShards_(dataShards), parityShards_(parityShards)
 {
-    if (shardSize == 0) {
-        throw std::invalid_argument("FEC shard size must not be zero");
+    if (shardSize_ == 0) {
+        throw std::invalid_argument("FEC shard size must not be zero.");
     }
 
-    impl_ = new Impl();
+    if (dataShards_ == 0) {
+        throw std::invalid_argument("FEC data shard count must not be zero.");
+    }
+
+    if (parityShards_ == 0) {
+        throw std::invalid_argument("FEC parity shard count must not be zero.");
+    }
+
+    const std::size_t totalShards = dataShards_ + parityShards_;
+
+    // fec_new() takes unsigned short counts.
+    if (totalShards > 255) {
+        throw std::invalid_argument("FEC shard count exceeds supported limit.");
+    }
+
+    impl_ = new Impl(dataShards_, parityShards_);
 }
 
 FecCodec::~FecCodec()
@@ -52,10 +69,11 @@ FecCodec::~FecCodec()
 
 FecCodec::FecCodec(FecCodec&& other) noexcept
     : impl_(std::exchange(other.impl_, nullptr)),
-    shardSize_(std::exchange(other.shardSize_, 0))
+    shardSize_(std::exchange(other.shardSize_, 0)),
+    dataShards_(std::exchange(other.dataShards_, 0)),
+    parityShards_(std::exchange(other.parityShards_, 0))
 {
 }
-
 
 FecCodec& FecCodec::operator=(FecCodec&& other) noexcept
 {
@@ -64,15 +82,25 @@ FecCodec& FecCodec::operator=(FecCodec&& other) noexcept
 
         impl_ = std::exchange(other.impl_, nullptr);
         shardSize_ = std::exchange(other.shardSize_, 0);
+        dataShards_ = std::exchange(other.dataShards_, 0);
+        parityShards_ = std::exchange(other.parityShards_, 0);
     }
 
     return *this;
 }
 
 void FecCodec::encode(
-    std::span<const std::span<const std::byte>, DataShards> dataShards,
-    std::span<std::span<std::byte>, ParityShards> parityShards)
+    std::span<const std::span<const std::byte>> dataShards,
+    std::span<std::span<std::byte>> parityShards)
 {
+    if (dataShards.size() != dataShards_) {
+        throw std::invalid_argument("Incorrect number of FEC data shards.");
+    }
+
+    if (parityShards.size() != parityShards_) {
+        throw std::invalid_argument("Incorrect number of FEC parity shards.");
+    }
+
     for (const auto shard : dataShards) {
         if (shard.size() != shardSize_) {
             throw std::invalid_argument("FEC data shard has incorrect size.");
@@ -81,53 +109,52 @@ void FecCodec::encode(
 
     for (const auto shard : parityShards) {
         if (shard.size() != shardSize_) {
-            throw std::invalid_argument(
-                "FEC parity shard has incorrect size.");
+            throw std::invalid_argument("FEC parity shard has incorrect size.");
         }
     }
 
-    std::array<const unsigned char*, DataShards> data{};
-    std::array<unsigned char*, ParityShards> parity{};
+    std::vector<const unsigned char*> data(dataShards_);
+    std::vector<unsigned char*> parity(parityShards_);
+    std::vector<unsigned int> parityIndices(parityShards_);
 
-    for (std::size_t i = 0; i < DataShards; ++i) {
+    for (std::size_t i = 0; i < dataShards_; ++i) {
         data[i] = reinterpret_cast<const unsigned char*>(dataShards[i].data());
     }
 
-    for (std::size_t i = 0; i < ParityShards; ++i) {
+    for (std::size_t i = 0; i < parityShards_; ++i) {
         parity[i] = reinterpret_cast<unsigned char*>(parityShards[i].data());
+
+        parityIndices[i] = static_cast<unsigned int>(dataShards_ + i);
     }
 
-    constexpr std::array<unsigned int, ParityShards> parityIndices{
-        DataShards,
-        DataShards + 1
-    };
-
-    fec_encode(impl_->fec, data.data(), parity.data(), parityIndices.data(), ParityShards, shardSize_);
+    fec_encode(impl_->fec, data.data(), parity.data(), parityIndices.data(), static_cast<unsigned int>(parityShards_), static_cast<unsigned long>(shardSize_));
 }
 
 bool FecCodec::decode(
-    std::span<std::span<const std::byte>, DataShards> shards,
-    std::span<const std::uint8_t, DataShards> shardIndices,
+    std::span<const std::span<const std::byte>> shards,
+    std::span<const std::uint8_t> shardIndices,
     std::span<std::span<std::byte>> outputShards)
 {
+    if (shards.size() != shardIndices.size()) {
+        return false;
+    }
+
+    if (shards.size() < dataShards_) {
+        return false;
+    }
+
+    if (shards.size() > dataShards_ + parityShards_) {
+        return false;
+    }
+
     if (outputShards.empty()) {
         return true;
     }
 
-    std::array<const unsigned char*, DataShards> input{};
-    std::array<unsigned int, DataShards> indices{};
-
-    for (std::size_t i = 0; i < DataShards; ++i) {
-        if (shards[i].size() != shardSize_) {
+    for (const auto shard : shards) {
+        if (shard.size() != shardSize_) {
             return false;
         }
-
-        if (shardIndices[i] >= TotalShards) {
-            return false;
-        }
-
-        input[i] = reinterpret_cast<const unsigned char*>(shards[i].data());
-        indices[i] = shardIndices[i];
     }
 
     for (const auto shard : outputShards) {
@@ -136,28 +163,38 @@ bool FecCodec::decode(
         }
     }
 
-    // outputShards must correspond to the missing DATA shards.
-    std::array<unsigned char*, DataShards> output{};
+    const std::size_t totalShards = dataShards_ + parityShards_;
+
+    std::vector<const unsigned char*> input(shards.size());
+    std::vector<unsigned int> indices(shards.size());
+
+    for (std::size_t i = 0; i < shards.size(); ++i) {
+        if (shardIndices[i] >= totalShards) {
+            return false;
+        }
+
+        input[i] = reinterpret_cast<const unsigned char*>(shards[i].data());
+        indices[i] = static_cast<unsigned int>(shardIndices[i]);
+    }
+
+    // Determine which DATA shards are missing.
+    std::vector<bool> present(dataShards_, false);
+
+    for (const auto index : shardIndices) {
+        if (index < dataShards_) {
+            present[index] = true;
+        }
+    }
 
     std::size_t outputIndex = 0;
 
-    for (std::size_t dataIndex = 0; dataIndex < DataShards; ++dataIndex)
+    for (std::size_t dataIndex = 0; dataIndex < dataShards_; ++dataIndex)
     {
-        const bool present = std::ranges::any_of(shardIndices, [dataIndex](const auto index) 
-            {
-                return index == dataIndex;
-            }
-        );
-
-        if (!present) {
-            if (outputIndex >= outputShards.size()) 
-            {
+        if (!present[dataIndex]) {
+            if (outputIndex >= outputShards.size()) {
                 return false;
             }
 
-            auto* destination = reinterpret_cast<unsigned char*>(outputShards[outputIndex].data());
-
-            output[outputIndex] = destination;
             ++outputIndex;
         }
     }
@@ -166,7 +203,18 @@ bool FecCodec::decode(
         return false;
     }
 
-    fec_decode(impl_->fec, input.data(), output.data(), indices.data(), shardSize_);
+    std::vector<unsigned char*> output(outputShards.size());
+
+    outputIndex = 0;
+
+    for (std::size_t dataIndex = 0; dataIndex < dataShards_; ++dataIndex)
+    {
+        if (!present[dataIndex]) {
+            output[outputIndex++] = reinterpret_cast<unsigned char*>(outputShards[outputIndex - 1].data());
+        }
+    }
+
+    fec_decode(impl_->fec, input.data(), output.data(), indices.data(), static_cast<unsigned long>(shardSize_));
 
     return true;
 }

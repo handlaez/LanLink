@@ -17,9 +17,9 @@ void UnifiedPacketizer::Packetize(const EncodedFrame& frame, std::vector<Packet>
     if (frame.data.empty())
         return;
 
+    constexpr std::size_t headerSize = sizeof(UDPStreamHeader);
+    constexpr std::size_t maxPayloadSize = MaxDatagramSize - headerSize;
     const std::size_t frameSize = frame.data.size();
-    constexpr std::size_t headerSize = sizeof(UDPFrameHeader);
-    const std::size_t maxPayloadSize = MaxDatagramSize - headerSize;
     const uint16_t packetCount = static_cast<uint16_t>((frameSize + maxPayloadSize - 1) / maxPayloadSize);
 
     if (outPackets.capacity() < packetCount) {
@@ -36,21 +36,24 @@ void UnifiedPacketizer::Packetize(const EncodedFrame& frame, std::vector<Packet>
         outPackets.emplace_back();
         auto& packet = outPackets.back();
 
-        if (packet.bytes.capacity() < headerSize + payloadSize) {
-            packet.bytes.reserve(MaxDatagramSize);
-        }
-        packet.bytes.resize(headerSize + payloadSize);
+        packet.bytes.resize(MaxDatagramSize, 0);
 
-        auto* header = reinterpret_cast<UDPFrameHeader*>(packet.bytes.data());
+        auto* header = reinterpret_cast<UDPStreamHeader*>(packet.bytes.data());
 
 #ifdef _WIN32
         header->timestamp = htonll(frame.timestamp);
 #else
         header->timestamp = htobe64(frame.timestamp);
 #endif
+        // assigned by FEC layer
+        header->sequenceNumber = 0;
+        header->fecBlockId = 0;
+        header->fecIndex = 0;
+
         header->packetIndex = htons(packetIndex);
         header->packetCount = htons(packetCount);
-        header->payloadSize = htonl(static_cast<uint32_t>(payloadSize));
+        header->payloadSize = htons(static_cast<uint16_t>(payloadSize));
+        header->flags = 0;
 
         std::memcpy(packet.bytes.data() + headerSize, frame.data.data() + offset, payloadSize);
 

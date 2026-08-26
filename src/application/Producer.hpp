@@ -16,6 +16,7 @@
 #include "platform/windows/WinFrameGrabber.hpp"
 #include "platform/windows/WinPacketSender.hpp"
 #include "common/UnifiedPacketizer.hpp"
+#include "common/UnifiedFecPacketizer.hpp"
 
 class Producer {
 public:
@@ -26,6 +27,7 @@ private:
 	WinFrameGrabber frameGrabber_;
 	std::unique_ptr<WinFrameConverter> frameConverter_;
 	std::unique_ptr<WinFrameEncoder> frameEncoder_;
+	std::unique_ptr<FecPacketizer> fecPacketizer_;
 	UnifiedPacketizer packetizer_;
 	WinPacketSender packetSender_;
 
