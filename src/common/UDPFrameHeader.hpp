@@ -20,6 +20,7 @@ struct UDPStreamHeader {
     uint32_t sequenceNumber; 
     uint16_t packetIndex;    
     uint16_t packetCount;    
+    uint8_t  fecDataShards;
 
     // FEC (forward error correction)
     uint32_t fecBlockId;     // which group does this belong to

@@ -8,12 +8,14 @@
 #include <arpa/inet.h>
 #endif
 
-
 #include "UnifiedFecPacketizer.hpp"
 
 namespace {
-    constexpr uint8_t PacketFlagParity = 1 << 0;
-} // namespace
+    constexpr std::size_t HeaderSize = sizeof(UDPStreamHeader);
+    constexpr std::size_t ShardSize = MaxDatagramSize - HeaderSize;
+
+    constexpr std::uint8_t PacketFlagParity = 1 << 0;
+}
 
 FecPacketizer::FecPacketizer(std::size_t shardSize) : shardSize_(shardSize)
 {
@@ -24,100 +26,110 @@ FecPacketizer::FecPacketizer(std::size_t shardSize) : shardSize_(shardSize)
 
 void FecPacketizer::Packetize(std::span<const Packet> dataPackets, std::vector<Packet>& outPackets)
 {
-    outPackets.empty();
+    outPackets.clear();
 
     if (dataPackets.empty()) {
         return;
     }
 
-    const std::size_t k = dataPackets.size();
-
-    if (k > MaxDataShards) {
-        throw std::invalid_argument("Frame contains too many packets for FEC");
+    if (dataPackets.size() > 0xFFFF) {
+        throw std::invalid_argument("Too many packets in frame");
     }
 
-    FecCodec& codec = getCodec(k);
+    // maximum output size assuming every block gets parity.
+    std::size_t requiredCapacity = dataPackets.size();
 
-    const std::size_t parityShards = codec.parityShards();
-    const std::size_t totalShards = k + parityShards;
+    for (std::size_t offset = 0; offset < dataPackets.size(); offset += MaxDataShards)
+    {
+        const std::size_t k = std::min(MaxDataShards, dataPackets.size() - offset);
+        requiredCapacity += k / 5 + 1;
+    }
 
-    outPackets.reserve(totalShards);
+    outPackets.reserve(requiredCapacity);
 
-    const uint32_t fecBlockId = nextBlockId_++;
+    const std::uint16_t packetCount = static_cast<std::uint16_t>(dataPackets.size());
+
+    std::size_t packetOffset = 0;
+
+    while (packetOffset < dataPackets.size()) {
+        const std::size_t k = std::min(MaxDataShards, dataPackets.size() - packetOffset);
+        const std::size_t parityCount = k / 5 + 1;
+
+        FecCodec& codec = getCodec(k);
+        const std::uint32_t blockId = nextBlockId_++;
 
     // Copy the data packets into the output and assign FEC metadata.
     // Note to self: it can be done better
 
-    for (std::size_t i = 0; i < dataPackets.size(); ++i) {
-        Packet packet = dataPackets[i];
+        for (std::size_t i = 0; i < k; ++i) {
+            Packet packet = dataPackets[packetOffset + i];
 
-        if (packet.bytes.size() != MaxDatagramSize) {
-            throw std::invalid_argument("FEC input packet has invalid size");
+            if (packet.bytes.size() != MaxDatagramSize) {
+                throw std::invalid_argument(
+                    "FEC input packet has invalid size");
+            }
+
+            auto* header = reinterpret_cast<UDPStreamHeader*>(packet.bytes.data());
+            header->sequenceNumber = htonl(nextSequenceNumber_++);
+            header->packetCount = htons(packetCount);
+            header->fecBlockId = htonl(blockId);
+            header->fecDataShards = static_cast<std::uint8_t>(k);
+            header->fecIndex = static_cast<std::uint8_t>(i);
+            header->flags &= ~PacketFlagParity;
+
+            outPackets.push_back(std::move(packet));
         }
 
-        auto* header = reinterpret_cast<UDPStreamHeader*>(packet.bytes.data());
+        // create parity buffers.
 
-#ifdef _WIN32
-        header->sequenceNumber = htonl(nextSequenceNumber_++);
-        header->fecBlockId = htonl(fecBlockId);
-#else
-        header->sequenceNumber = htonl(nextSequenceNumber_++);
-        header->fecBlockId = htonl(fecBlockId);
-#endif
+        std::vector<std::vector<std::byte>> parityBuffers(parityCount, std::vector<std::byte>(shardSize_));
 
-        header->fecIndex = static_cast<uint8_t>(i);
-        header->flags &= ~PacketFlagParity;
+        std::vector<std::span<const std::byte>> dataShards;
+        std::vector<std::span<std::byte>> parityShards;
 
-        outPackets.push_back(std::move(packet));
-    }
+        dataShards.reserve(k);
+        parityShards.reserve(parityCount);
 
-    // Prepare FEC input/output shards.
-    std::vector<std::span<const std::byte>> dataShards;
-    dataShards.reserve(k);
+        for (std::size_t i = 0; i < k; ++i) {
+            const auto& packet = outPackets[outPackets.size() - k + i];
 
-    for (const auto& packet : outPackets) {
-        dataShards.emplace_back(
-            reinterpret_cast<const std::byte*>(packet.bytes.data() + sizeof(UDPStreamHeader)), shardSize_);
-    }
+            dataShards.emplace_back(reinterpret_cast<const std::byte*>(packet.bytes.data() + HeaderSize), shardSize_);
+        }
 
-    std::vector<std::vector<std::byte>> parityBuffers(parityShards, std::vector<std::byte>(shardSize_));
+        for (auto& buffer : parityBuffers) {
+            parityShards.emplace_back(buffer.data(), buffer.size());
+        }
 
-    std::vector<std::span<std::byte>> parityShardsViews;
-    parityShardsViews.reserve(parityShards);
+        codec.encode(dataShards, parityShards);
 
-    for (auto& buffer : parityBuffers) {
-        parityShardsViews.emplace_back(
-            buffer.data(),
-            buffer.size());
-    }
+        // Turn parity into normal UDP packets.
 
-    // Generate Parity
-    codec.encode(dataShards, parityShardsViews);
+        const auto* firstHeader =
+            reinterpret_cast<const UDPStreamHeader*>(
+                outPackets[outPackets.size() - k].bytes.data());
 
-    // Turn parity shards into UDP packets.
-    const Packet& firstDataPacket = outPackets.front();
+        for (std::size_t i = 0; i < parityCount; ++i) {
+            Packet packet;
+            packet.bytes.resize(MaxDatagramSize, 0);
 
-    const auto* firstHeader =
-        reinterpret_cast<const UDPStreamHeader*>(firstDataPacket.bytes.data());
+            auto* header = reinterpret_cast<UDPStreamHeader*>(packet.bytes.data());
 
-    for (std::size_t i = 0; i < parityShards; ++i) {
-        Packet packet;
-        packet.bytes.resize(MaxDatagramSize, 0);
+            header->timestamp = firstHeader->timestamp;
+            header->sequenceNumber = htonl(nextSequenceNumber_++);
+            header->packetIndex = 0;
+            header->packetCount = htons(packetCount);
+            header->fecBlockId = htonl(blockId);
+            header->fecDataShards = static_cast<std::uint8_t>(k);
+            header->fecIndex = static_cast<std::uint8_t>(k + i);
+            header->payloadSize = htons(static_cast<std::uint16_t>(shardSize_));
+            header->flags = PacketFlagParity;
 
-        auto* header = reinterpret_cast<UDPStreamHeader*>(packet.bytes.data());
+            std::memcpy(packet.bytes.data() + HeaderSize, parityBuffers[i].data(), shardSize_);
 
-        header->timestamp = firstHeader->timestamp;
-        header->sequenceNumber = htonl(nextSequenceNumber_++);
-        header->packetIndex = 0;
-        header->packetCount = firstHeader->packetCount;
-        header->fecBlockId = htonl(fecBlockId);
-        header->fecIndex = static_cast<uint8_t>(k + i);
-        header->payloadSize = htons(static_cast<uint16_t>(shardSize_));
-        header->flags = PacketFlagParity;
+            outPackets.push_back(std::move(packet));
+        }
 
-        std::memcpy(packet.bytes.data() + sizeof(UDPStreamHeader), parityBuffers[i].data(), shardSize_);
-
-        outPackets.push_back(std::move(packet));
+        packetOffset += k;
     }
 }
 

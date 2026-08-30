@@ -26,8 +26,7 @@ void FecDepacketizer::processPacket(const std::uint8_t* data, std::size_t size, 
     const auto* header = reinterpret_cast<const UDPStreamHeader*>(data);
 
     const std::uint32_t blockId = ntohl(header->fecBlockId);
-
-    const std::size_t dataShards = ntohs(header->packetCount);
+    const std::size_t dataShards = header->fecDataShards;
 
     if (dataShards == 0 || dataShards > MaxDataShards) {
         return;
@@ -61,18 +60,14 @@ void FecDepacketizer::processPacket(const std::uint8_t* data, std::size_t size, 
     }
 
     block_.packets[index].bytes.assign(data, data + size);
-
     block_.received[index] = true;
 
     // count shards,
     const std::size_t receivedCount = std::count(block_.received.begin(), block_.received.begin() + totalShards, true);
-
     // we cannot recover anything until we have at least K shards.
     if (receivedCount < dataShards) {
         return;
     }
-
-    FecCodec& codec = getCodec(dataShards);
 
     // build the list of available shards.
     std::vector<std::span<const std::byte>> shards;
@@ -81,7 +76,8 @@ void FecDepacketizer::processPacket(const std::uint8_t* data, std::size_t size, 
     shards.reserve(receivedCount);
     shardIndices.reserve(receivedCount);
 
-    for (std::size_t i = 0; i < totalShards; ++i) {
+    for (std::size_t i = 0; i < totalShards && shards.size() < dataShards; ++i)
+    {
         if (!block_.received[i]) {
             continue;
         }
@@ -113,6 +109,8 @@ void FecDepacketizer::processPacket(const std::uint8_t* data, std::size_t size, 
         return;
     }
 
+    FecCodec& codec = getCodec(dataShards);
+
     // allocate reconstructed payloads.
     std::vector<std::vector<std::byte>> recoveredBuffers(missingDataIndices.size(), std::vector<std::byte>(ShardSize));
     std::vector<std::span<std::byte>> recoveredShards;
@@ -131,7 +129,7 @@ void FecDepacketizer::processPacket(const std::uint8_t* data, std::size_t size, 
     // we need metadata for constructing recovered packets.
     const Packet* referencePacket = nullptr;
 
-    for (std::size_t i = 0; i < totalShards; ++i) {
+    for (std::size_t i = 0; i < dataShards; ++i) {
         if (block_.received[i]) {
             referencePacket = &block_.packets[i];
             break;
