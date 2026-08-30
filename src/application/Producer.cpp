@@ -159,6 +159,7 @@ void Producer::run(std::atomic<bool>& running)
             std::this_thread::sleep_for(std::chrono::milliseconds(8));
 
             if (frameEncoder_->ReceiveFrame(encoded)) {
+
                 packetizer_.Packetize(encoded, packets);
 
                 fecPacketizer_->Packetize(packets, fecPackets);

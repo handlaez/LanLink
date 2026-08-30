@@ -17,24 +17,24 @@ std::optional<EncodedFrame> UnifiedDepacketizer::processPacket(
         return std::nullopt;
     }
 
-    if (size <= sizeof(UDPFrameHeader)) {
+    if (size <= sizeof(UDPStreamHeader)) {
         return std::nullopt;
     }
 
-    UDPFrameHeader header{};
+    UDPStreamHeader header{};
 
-    std::memcpy(&header, packetData, sizeof(UDPFrameHeader));
+    std::memcpy(&header, packetData, sizeof(UDPStreamHeader));
 
     header.timestamp = ntohll(header.timestamp);
     header.packetIndex = ntohs(header.packetIndex);
     header.packetCount = ntohs(header.packetCount);
-    header.payloadSize = ntohl(header.payloadSize);
+    header.payloadSize = ntohs(header.payloadSize);
 
     if (header.packetIndex >= header.packetCount) {
         return std::nullopt;
     }
 
-    if (sizeof(UDPFrameHeader) + header.payloadSize > size) {
+    if (sizeof(UDPStreamHeader) + header.payloadSize > size) {
         return std::nullopt;
     }
 
@@ -54,7 +54,7 @@ std::optional<EncodedFrame> UnifiedDepacketizer::processPacket(
     }
 
     if (!frame.received[header.packetIndex]) {
-        const uint8_t* payload = packetData + sizeof(UDPFrameHeader);
+        const uint8_t* payload = packetData + sizeof(UDPStreamHeader);
 
         frame.packets[header.packetIndex] = std::vector<uint8_t>(payload, payload + header.payloadSize);
 

@@ -30,6 +30,7 @@ set(COMMON_SOURCES
     src/application/Logger.cpp
     src/common/UnifiedFecCodec.cpp
     src/common/UnifiedFecPacketizer.cpp
+    src/common/UnifiedFecDepacketizer.cpp
 )
 
 set(COMMON_HEADERS
@@ -46,6 +47,7 @@ set(COMMON_HEADERS
     src/application/Logger.hpp
     src/common/UnifiedFecCodec.hpp
     src/common/UnifiedFecPacketizer.hpp
+    src/common/UnifiedFecDepacketizer.hpp
 )
 
 # --- Platform Specific Configurations ---

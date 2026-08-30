@@ -26,6 +26,7 @@ bool Consumer::initialize(uint16_t port)
 void Consumer::run(const std::atomic<bool>& running)
 {
     std::vector<uint8_t> packetBuffer(1500);
+    std::vector<Packet> fecPackets;
 
     while (running.load(std::memory_order_relaxed)) {
         const int packetSize = receiver_.receivePacket(packetBuffer.data(), packetBuffer.size());
@@ -39,31 +40,34 @@ void Consumer::run(const std::atomic<bool>& running)
             continue;
         }
 
-        const auto encodedFrame = depacketizer_.processPacket(packetBuffer.data(), static_cast<size_t>(packetSize));
+        fecDepacketizer_.processPacket(packetBuffer.data(), static_cast<std::size_t>(packetSize),fecPackets);
 
-        if (!encodedFrame.has_value()) {
-            continue;
-        }
+        for (const auto& packet : fecPackets) {
+            const auto encodedFrame = depacketizer_.processPacket(packet.bytes.data(), packet.bytes.size());
 
-        if (!decoder_.sendPacket(*encodedFrame)) {
-            logger().error("Failed to send encoded frame to decoder.");
-            continue;
-        }
-
-        VideoFrame decodedFrame{};
-
-        while (decoder_.receiveFrame(decodedFrame)) {
-            if (!rendererInitialized_) {
-                if (!renderer_.initialize(static_cast<int>(decodedFrame.width), static_cast<int>(decodedFrame.height), "LanLink")) 
-                {
-                    logger().error("Failed to initialize frame renderer.");
-                    return;
-                }
-
-                rendererInitialized_ = true;
+            if (!encodedFrame.has_value()) {
+                continue;
             }
 
-            renderer_.render(decodedFrame);
+            if (!decoder_.sendPacket(*encodedFrame)) {
+                logger().error("Failed to send encoded frame to decoder.");
+                continue;
+            }
+
+            VideoFrame decodedFrame{};
+
+            while (decoder_.receiveFrame(decodedFrame)) {
+                if (!rendererInitialized_) {
+                    if (!renderer_.initialize(static_cast<int>(decodedFrame.width), static_cast<int>(decodedFrame.height), "LanLink")) {
+                        logger().error("Failed to initialize frame renderer.");
+                        return;
+                    }
+
+                    rendererInitialized_ = true;
+                }
+
+                renderer_.render(decodedFrame);
+            }
         }
     }
 

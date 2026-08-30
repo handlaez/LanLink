@@ -38,7 +38,7 @@ void FecPacketizer::Packetize(std::span<const Packet> dataPackets, std::vector<P
 
     FecCodec& codec = getCodec(k);
 
-    const std::size_t parityShards = codec.ParityShards;
+    const std::size_t parityShards = codec.parityShards();
     const std::size_t totalShards = k + parityShards;
 
     outPackets.reserve(totalShards);

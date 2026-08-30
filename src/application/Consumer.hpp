@@ -7,6 +7,8 @@
 #include "platform/linux/LnxFrameRenderer.hpp"
 #include "platform/linux/LnxPacketReceiver.hpp"
 #include "common/UnifiedDepacketizer.hpp"
+#include "common/UnifiedFecDepacketizer.hpp"
+#include "common/UDPFrameHeader.hpp"
 
 class Consumer {
 public:
@@ -15,11 +17,14 @@ public:
 
 private:
 	LnxPacketReceiver receiver_;
+	FecDepacketizer fecDepacketizer_;
 	UnifiedDepacketizer depacketizer_;
 	LnxFrameDecoder decoder_;
 	LnxFrameRenderer renderer_;
 
 	bool rendererInitialized_;
+
+	std::vector<Packet> fecPackets;
 };
 
 #endif 
