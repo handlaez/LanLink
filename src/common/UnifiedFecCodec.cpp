@@ -6,7 +6,17 @@
 #include <vector>
 
 extern "C" {
+
+#ifdef __cplusplus
+#define restrict __restrict__
+#endif
+
 #include <fec.h>
+
+#ifdef __cplusplus
+#undef restrict
+#endif
+
 }
 
 struct FecCodec::Impl {
@@ -135,15 +145,11 @@ bool FecCodec::decode(
     std::span<const std::uint8_t> shardIndices,
     std::span<std::span<std::byte>> outputShards)
 {
-    if (shards.size() != shardIndices.size()) {
+    if (shards.size() != dataShards_) {
         return false;
     }
 
-    if (shards.size() < dataShards_) {
-        return false;
-    }
-
-    if (shards.size() > dataShards_ + parityShards_) {
+    if (shardIndices.size() != dataShards_) {
         return false;
     }
 
@@ -165,10 +171,10 @@ bool FecCodec::decode(
 
     const std::size_t totalShards = dataShards_ + parityShards_;
 
-    std::vector<const unsigned char*> input(shards.size());
-    std::vector<unsigned int> indices(shards.size());
+    std::vector<const unsigned char*> input(dataShards_);
+    std::vector<unsigned int> indices(dataShards_);
 
-    for (std::size_t i = 0; i < shards.size(); ++i) {
+    for (std::size_t i = 0; i < dataShards_; ++i) {
         if (shardIndices[i] >= totalShards) {
             return false;
         }
@@ -177,7 +183,6 @@ bool FecCodec::decode(
         indices[i] = static_cast<unsigned int>(shardIndices[i]);
     }
 
-    // Determine which DATA shards are missing.
     std::vector<bool> present(dataShards_, false);
 
     for (const auto index : shardIndices) {
@@ -186,31 +191,26 @@ bool FecCodec::decode(
         }
     }
 
-    std::size_t outputIndex = 0;
+    std::size_t missingCount = 0;
 
-    for (std::size_t dataIndex = 0; dataIndex < dataShards_; ++dataIndex)
-    {
-        if (!present[dataIndex]) {
-            if (outputIndex >= outputShards.size()) {
-                return false;
-            }
-
-            ++outputIndex;
+    for (std::size_t i = 0; i < dataShards_; ++i) {
+        if (!present[i]) {
+            ++missingCount;
         }
     }
 
-    if (outputIndex != outputShards.size()) {
+    if (missingCount != outputShards.size()) {
         return false;
     }
 
     std::vector<unsigned char*> output(outputShards.size());
 
-    outputIndex = 0;
+    std::size_t outputIndex = 0;
 
-    for (std::size_t dataIndex = 0; dataIndex < dataShards_; ++dataIndex)
-    {
-        if (!present[dataIndex]) {
-            output[outputIndex++] = reinterpret_cast<unsigned char*>(outputShards[outputIndex - 1].data());
+    for (std::size_t i = 0; i < dataShards_; ++i) {
+        if (!present[i]) {
+            output[outputIndex] = reinterpret_cast<unsigned char*>(outputShards[outputIndex].data());
+            ++outputIndex;
         }
     }
 

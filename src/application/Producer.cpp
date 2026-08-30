@@ -134,6 +134,8 @@ void Producer::run(std::atomic<bool>& running)
         return;
     }
 
+    logger().info("Producer run() started.");
+
     EncodedFrame encoded;
     std::vector<Packet> packets;
     std::vector<Packet> fecPackets;
@@ -161,10 +163,9 @@ void Producer::run(std::atomic<bool>& running)
             if (frameEncoder_->ReceiveFrame(encoded)) {
 
                 packetizer_.Packetize(encoded, packets);
-
                 fecPacketizer_->Packetize(packets, fecPackets);
 
-                for (const auto& packet : packets) {
+                for (const auto& packet : fecPackets) {
                     packetSender_.Send(packet.bytes);
                 }
             }

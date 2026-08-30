@@ -15,16 +15,17 @@ struct Packet {
 
 #pragma pack(push, 1)
 struct UDPStreamHeader {
-    uint64_t timestamp;
 
+    uint64_t timestamp;
     uint32_t sequenceNumber; 
     uint16_t packetIndex;    
     uint16_t packetCount;    
-    uint8_t  fecDataShards;
 
     // FEC (forward error correction)
     uint32_t fecBlockId;     // which group does this belong to
+    uint16_t fecPacketOffset;// offset for multi-block frames (shard 5 from block 2 is shard 45, not 5)
     uint8_t  fecIndex;       // position in the group (0-9=Data, 10-11=Parity)
+    uint8_t  fecDataShards;
 
     // Payload
     uint16_t payloadSize;

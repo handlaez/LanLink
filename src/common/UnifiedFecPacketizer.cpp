@@ -74,6 +74,7 @@ void FecPacketizer::Packetize(std::span<const Packet> dataPackets, std::vector<P
             header->packetCount = htons(packetCount);
             header->fecBlockId = htonl(blockId);
             header->fecDataShards = static_cast<std::uint8_t>(k);
+            header->fecPacketOffset = htons(static_cast<std::uint16_t>(packetOffset));
             header->fecIndex = static_cast<std::uint8_t>(i);
             header->flags &= ~PacketFlagParity;
 
@@ -104,9 +105,7 @@ void FecPacketizer::Packetize(std::span<const Packet> dataPackets, std::vector<P
 
         // Turn parity into normal UDP packets.
 
-        const auto* firstHeader =
-            reinterpret_cast<const UDPStreamHeader*>(
-                outPackets[outPackets.size() - k].bytes.data());
+        const auto* firstHeader = reinterpret_cast<const UDPStreamHeader*>(outPackets[outPackets.size() - k].bytes.data());
 
         for (std::size_t i = 0; i < parityCount; ++i) {
             Packet packet;
@@ -120,6 +119,7 @@ void FecPacketizer::Packetize(std::span<const Packet> dataPackets, std::vector<P
             header->packetCount = htons(packetCount);
             header->fecBlockId = htonl(blockId);
             header->fecDataShards = static_cast<std::uint8_t>(k);
+            header->fecPacketOffset = htons(static_cast<std::uint16_t>(packetOffset));
             header->fecIndex = static_cast<std::uint8_t>(k + i);
             header->payloadSize = htons(static_cast<std::uint16_t>(shardSize_));
             header->flags = PacketFlagParity;

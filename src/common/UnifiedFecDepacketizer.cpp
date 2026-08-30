@@ -70,22 +70,34 @@ void FecDepacketizer::processPacket(const std::uint8_t* data, std::size_t size, 
     }
 
     // build the list of available shards.
-    std::vector<std::span<const std::byte>> shards;
-    std::vector<std::uint8_t> shardIndices;
+    std::vector<std::span<const std::byte>> shards(dataShards);
+    std::vector<std::uint8_t> shardIndices(dataShards);
 
-    shards.reserve(receivedCount);
-    shardIndices.reserve(receivedCount);
+    std::size_t parityIndex = dataShards;
 
-    for (std::size_t i = 0; i < totalShards && shards.size() < dataShards; ++i)
-    {
-        if (!block_.received[i]) {
-            continue;
+    for (std::size_t i = 0; i < dataShards; ++i) {
+        if (block_.received[i]) {
+            const auto& packet = block_.packets[i];
+
+            shards[i] = std::span<const std::byte>(reinterpret_cast<const std::byte*>(packet.bytes.data() + HeaderSize), ShardSize);
+            shardIndices[i] = static_cast<std::uint8_t>(i);
         }
+        else {
+            while (parityIndex < totalShards && !block_.received[parityIndex]) {
+                ++parityIndex;
+            }
 
-        const auto& packet = block_.packets[i];
+            if (parityIndex >= totalShards) {
+                return;
+            }
 
-        shards.emplace_back(reinterpret_cast<const std::byte*>(packet.bytes.data() + HeaderSize), ShardSize);
-        shardIndices.push_back(static_cast<std::uint8_t>(i));
+            const auto& packet = block_.packets[parityIndex];
+
+            shards[i] = std::span<const std::byte>(reinterpret_cast<const std::byte*>(packet.bytes.data() + HeaderSize), ShardSize);
+            shardIndices[i] = static_cast<std::uint8_t>(parityIndex);
+
+            ++parityIndex;
+        }
     }
 
     // determine missing shards.
@@ -141,11 +153,12 @@ void FecDepacketizer::processPacket(const std::uint8_t* data, std::size_t size, 
         return;
     }
 
-    const auto* referenceHeader = reinterpret_cast<const UDPStreamHeader*>( referencePacket->bytes.data());
+    const auto* referenceHeader = reinterpret_cast<const UDPStreamHeader*>(referencePacket->bytes.data());
 
     outPackets.reserve(dataShards);
 
     std::size_t recoveredIndex = 0;
+    const std::uint16_t packetOffset = ntohs(referenceHeader->fecPacketOffset);
 
     for (std::size_t i = 0; i < dataShards; ++i) {
         if (block_.received[i]) {
@@ -156,17 +169,18 @@ void FecDepacketizer::processPacket(const std::uint8_t* data, std::size_t size, 
         Packet packet;
         packet.bytes.resize(MaxDatagramSize, 0);
 
-        auto* recoveredHeader = reinterpret_cast<UDPStreamHeader*>( packet.bytes.data());
+        auto* recoveredHeader = reinterpret_cast<UDPStreamHeader*>(packet.bytes.data());
 
         recoveredHeader->timestamp = referenceHeader->timestamp;
         recoveredHeader->sequenceNumber = 0;
-        recoveredHeader->packetIndex = htons(static_cast<std::uint16_t>(i));
+        recoveredHeader->packetIndex = htons(static_cast<std::uint16_t>(packetOffset + i));
         recoveredHeader->packetCount = referenceHeader->packetCount;
+        recoveredHeader->fecDataShards = referenceHeader->fecDataShards;
         recoveredHeader->fecBlockId = referenceHeader->fecBlockId;
+        recoveredHeader->fecPacketOffset = referenceHeader->fecPacketOffset;
         recoveredHeader->fecIndex = static_cast<std::uint8_t>(i);
-        // we know the recovered shard is fully populated, but the original payloadSize is lost
         recoveredHeader->payloadSize = htons(static_cast<std::uint16_t>(ShardSize));
-        recoveredHeader->flags = referenceHeader->flags;
+        recoveredHeader->flags = 0;
 
         std::memcpy(packet.bytes.data() + HeaderSize, recoveredBuffers[recoveredIndex].data(), ShardSize);
 
