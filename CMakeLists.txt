@@ -28,6 +28,7 @@ set(COMMON_SOURCES
     src/common/UnifiedPacketizer.cpp
     src/common/UnifiedDepacketizer.cpp
     src/application/Logger.cpp
+    src/application/UnifiedArgParser.cpp
     src/common/UnifiedFecCodec.cpp
     src/common/UnifiedFecPacketizer.cpp
     src/common/UnifiedFecDepacketizer.cpp
@@ -45,6 +46,7 @@ set(COMMON_HEADERS
     src/common/IFrameDecoder.hpp
     src/common/IFrameRenderer.hpp
     src/application/Logger.hpp
+    src/application/UnifiedArgParser.hpp
     src/common/UnifiedFecCodec.hpp
     src/common/UnifiedFecPacketizer.hpp
     src/common/UnifiedFecDepacketizer.hpp
@@ -150,7 +152,7 @@ if(WIN32)
             NOMINMAX
     )
 
-    set_target_properties(${PROJECT_NAME} PROPERTIES WIN32_EXECUTABLE TRUE)
+    set_target_properties(${PROJECT_NAME} PROPERTIES WIN32_EXECUTABLE FALSE)
 endif()
 
 # Qt .dll copy

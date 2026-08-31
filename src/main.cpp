@@ -4,28 +4,70 @@
 #include <QDirIterator>
 #include <QQuickStyle>
 
+#include <iostream>
+#include <atomic>
+
+#include "src/application/UnifiedArgParser.hpp"
+#ifdef _WIN32
+#include "src/application/Producer.hpp"
+#else
+#include "src/application/Consumer.hpp"
+#endif
+
 int main(int argc, char* argv[])
 {
-    QGuiApplication app(argc, argv);
+    try {
+        const Config config = ArgParser::parse(argc, argv);
+        std::atomic<bool> running = true;
 
-    QQuickStyle::setStyle("Fusion");
+        if (!config.gui) {
+            // Terminal mode
+            if (config.producer) {
+#ifdef _WIN32
+                Producer producer;
+                producer.initialize(config.ip, config.port);
+                producer.run(running);
+#else
+                std::cerr << "Producer mode is not yet implemented on Linux. Sorry!\n";
+#endif
+            }
+            else {
+#ifdef _WIN32
+                std::cerr << "Consumer mode is not yet implemented on Windows. Sorry!\n";
+#else
+                Consumer consumer;
+                consumer.initialize(config.port);
+                consumer.run(running);
+#endif
+            }
 
-    QQmlApplicationEngine engine;
+            return 0;
+        }
 
-    QObject::connect(
-        &engine,
-        &QQmlApplicationEngine::objectCreationFailed,
-        &app,
-        []() { QCoreApplication::exit(-1); },
-        Qt::QueuedConnection
-    );
+        // GUI mode
+        QGuiApplication app(argc, argv);
+        QQuickStyle::setStyle("Fusion");
+        QQmlApplicationEngine engine;
 
-    engine.loadFromModule("LanLinkApp", "Main");
+        QObject::connect(
+            &engine,
+            &QQmlApplicationEngine::objectCreationFailed,
+            &app,
+            []() { QCoreApplication::exit(-1); },
+            Qt::QueuedConnection
+        );
 
-    if (engine.rootObjects().isEmpty()) {
-        qCritical() << "Failed to load QML module LanLinkApp/Main";
-        return -1;
+        engine.loadFromModule("LanLinkApp", "Main");
+
+        if (engine.rootObjects().isEmpty()) {
+            qCritical() << "Failed to load QML module LanLinkApp/Main";
+            return -1;
+        }
+
+        return app.exec();
     }
-
-    return app.exec();
+    catch (const std::exception& e) {
+        std::cerr << "Error: " << e.what() << '\n';
+        return 1;
+    }
 }
