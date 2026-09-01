@@ -32,7 +32,7 @@ void FecDepacketizer::processPacket(const std::uint8_t* data, std::size_t size, 
         return;
     }
 
-    const std::size_t parityShards = dataShards / 5 + 1;
+    const std::size_t parityShards = dataShards / 5 + 2;
     const std::size_t totalShards = dataShards + parityShards;
 
     if (header->fecIndex >= totalShards) {
