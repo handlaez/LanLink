@@ -60,6 +60,7 @@ if(WIN32)
         src/platform/windows/WinFrameEncoder.cpp
         src/platform/windows/WinPacketSender.cpp
         src/application/Producer.cpp
+        src/platform/windows/WinPacketReceiver.cpp
     )
 
     set(PLATFORM_HEADERS
@@ -68,6 +69,7 @@ if(WIN32)
         src/platform/windows/WinFrameEncoder.hpp
         src/platform/windows/WinPacketSender.hpp
         src/application/Producer.hpp
+        src/platform/windows/WinPacketReceiver.hpp
     )
 
     set(PLATFORM_LIBS
