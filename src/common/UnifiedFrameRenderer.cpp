@@ -4,10 +4,10 @@ extern "C" {
 #include <libavutil/frame.h>
 }
 
-#include "LnxFrameRenderer.hpp"
+#include "UnifiedFrameRenderer.hpp"
 #include "Logger.hpp"
 
-LnxFrameRenderer::~LnxFrameRenderer()
+FrameRenderer::~FrameRenderer()
 {
     if (m_texture) {
         SDL_DestroyTexture(m_texture);
@@ -27,7 +27,7 @@ LnxFrameRenderer::~LnxFrameRenderer()
     SDL_Quit();
 }
 
-bool LnxFrameRenderer::initialize(
+bool FrameRenderer::initialize(
     int width,
     int height,
     const char* windowTitle)
@@ -75,7 +75,7 @@ bool LnxFrameRenderer::initialize(
     return true;
 }
 
-void LnxFrameRenderer::render(const VideoFrame& frame)
+void FrameRenderer::render(const VideoFrame& frame)
 {
     if (!m_renderer || frame.nativeResource == nullptr) {
         return;
@@ -132,7 +132,7 @@ void LnxFrameRenderer::render(const VideoFrame& frame)
     SDL_RenderPresent(m_renderer);
 }
 
-bool LnxFrameRenderer::pollEvents()
+bool FrameRenderer::pollEvents()
 {
     SDL_Event event;
 

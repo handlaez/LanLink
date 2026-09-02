@@ -18,6 +18,7 @@ endif()
 
 find_package(Qt6 REQUIRED COMPONENTS Quick QuickControls2)
 find_package(zfec CONFIG REQUIRED)
+find_package(sdl2 CONFIG REQUIRED)
 
 if(WIN32)
     # --- Windows FFmpeg (via vcpkg) ---
@@ -34,7 +35,6 @@ else()
     # --- Linux Dependencies (via pkg-config) ---
     find_package(PkgConfig REQUIRED)
     
-    pkg_check_modules(SDL2 REQUIRED IMPORTED_TARGET sdl2)
     pkg_check_modules(FFMPEG REQUIRED IMPORTED_TARGET libavcodec libavformat libavutil)
     
     set(FFMPEG_LIBS PkgConfig::FFMPEG)
@@ -51,6 +51,7 @@ set(COMMON_SOURCES
     src/common/UnifiedFecPacketizer.cpp
     src/common/UnifiedFecDepacketizer.cpp
     src/common/UnifiedFrameDecoder.cpp
+    src/common/UnifiedFrameRenderer.cpp
 )
 
 set(COMMON_HEADERS
@@ -70,6 +71,7 @@ set(COMMON_HEADERS
     src/common/UnifiedFecPacketizer.hpp
     src/common/UnifiedFecDepacketizer.hpp
     src/common/UnifiedFrameDecoder.hpp
+    src/common/UnifiedFrameRenderer.hpp
 )
 
 # --- Platform Specific Configurations ---
@@ -94,13 +96,11 @@ if(WIN32)
 else()
     set(PLATFORM_SOURCES
         src/platform/linux/LnxPacketReceiver.cpp
-        src/platform/linux/LnxFrameRenderer.cpp
         src/application/Consumer.cpp
     )
 
     set(PLATFORM_HEADERS
         src/platform/linux/LnxPacketReceiver.hpp
-        src/platform/linux/LnxFrameRenderer.hpp
         src/application/Consumer.hpp
     )
 endif()

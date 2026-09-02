@@ -1,5 +1,5 @@
-#ifndef LNX_FRAME_RENDERER_HPP
-#define LNX_FRAME_RENDERER_HPP
+#ifndef UNIFIED_FRAME_RENDERER_HPP
+#define UNIFIED_FRAME_RENDERER_HPP
 
 #include "common/IFrameRenderer.hpp"
 
@@ -7,15 +7,12 @@ struct SDL_Window;
 struct SDL_Renderer;
 struct SDL_Texture;
 
-class LnxFrameRenderer final : public IFrameRenderer {
+class FrameRenderer final : public IFrameRenderer {
 public:
-    LnxFrameRenderer() = default;
-    ~LnxFrameRenderer() override;
+    FrameRenderer() = default;
+    ~FrameRenderer() override;
 
-    bool initialize(
-        int width,
-        int height,
-        const char* windowTitle) override;
+    bool initialize(int width, int height, const char* windowTitle) override;
 
     void render(const VideoFrame& frame) override;
 
@@ -30,4 +27,4 @@ private:
     int m_height = 0;
 };
 
-#endif // LNX_FRAME_RENDERER_HPP
+#endif // UNIFIED_FRAME_RENDERER_HPP
