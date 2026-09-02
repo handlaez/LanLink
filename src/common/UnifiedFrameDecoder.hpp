@@ -1,5 +1,5 @@
-#ifndef LNX_FRAME_DECODER_HPP
-#define LNX_FRAME_DECODER_HPP
+#ifndef UNIFIED_FRAME_DECODER_HPP
+#define UNIFIED_FRAME_DECODER_HPP
 
 #include "common/IFrameDecoder.hpp"
 
@@ -7,10 +7,10 @@ extern "C" {
 #include <libavcodec/avcodec.h>
 }
 
-class LnxFrameDecoder final : public IFrameDecoder {
+class FrameDecoder final : public IFrameDecoder {
 public:
-    LnxFrameDecoder() = default;
-    ~LnxFrameDecoder() override;
+    FrameDecoder() = default;
+    ~FrameDecoder() override;
 
     bool initialize() override;
 
@@ -26,4 +26,4 @@ private:
     AVFrame* m_frame = nullptr;
 };
 
-#endif // LNX_FRAME_DECODER_HPP
+#endif // UNIFIED_FRAME_DECODER_HPP

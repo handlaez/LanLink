@@ -16,12 +16,30 @@ if(MSVC)
     add_compile_options(/Zc:__cplusplus)
 endif()
 
-find_package(Qt6 REQUIRED COMPONENTS
-    Quick
-    QuickControls2
-)
-
+find_package(Qt6 REQUIRED COMPONENTS Quick QuickControls2)
 find_package(zfec CONFIG REQUIRED)
+
+if(WIN32)
+    # --- Windows FFmpeg (via vcpkg) ---
+    find_path(FFMPEG_INCLUDE_DIR NAMES libavcodec/avcodec.h)
+    find_library(AVCODEC_LIBRARY NAMES avcodec)
+    find_library(AVFORMAT_LIBRARY NAMES avformat)
+    find_library(AVUTIL_LIBRARY NAMES avutil)
+    
+    set(FFMPEG_LIBS ${AVCODEC_LIBRARY} ${AVFORMAT_LIBRARY} ${AVUTIL_LIBRARY})
+    
+    # Windows system libraries
+    set(PLATFORM_LIBS d3d11 dxgi d3dcompiler ws2_32 mfplat mf mfreadwrite mfuuid)
+else()
+    # --- Linux Dependencies (via pkg-config) ---
+    find_package(PkgConfig REQUIRED)
+    
+    pkg_check_modules(SDL2 REQUIRED IMPORTED_TARGET sdl2)
+    pkg_check_modules(FFMPEG REQUIRED IMPORTED_TARGET libavcodec libavformat libavutil)
+    
+    set(FFMPEG_LIBS PkgConfig::FFMPEG)
+    set(PLATFORM_LIBS PkgConfig::SDL2)
+endif()
 
 # --- Common Sources ---
 set(COMMON_SOURCES
@@ -32,6 +50,7 @@ set(COMMON_SOURCES
     src/common/UnifiedFecCodec.cpp
     src/common/UnifiedFecPacketizer.cpp
     src/common/UnifiedFecDepacketizer.cpp
+    src/common/UnifiedFrameDecoder.cpp
 )
 
 set(COMMON_HEADERS
@@ -50,6 +69,7 @@ set(COMMON_HEADERS
     src/common/UnifiedFecCodec.hpp
     src/common/UnifiedFecPacketizer.hpp
     src/common/UnifiedFecDepacketizer.hpp
+    src/common/UnifiedFrameDecoder.hpp
 )
 
 # --- Platform Specific Configurations ---
@@ -71,42 +91,17 @@ if(WIN32)
         src/application/Producer.hpp
         src/platform/windows/WinPacketReceiver.hpp
     )
-
-    set(PLATFORM_LIBS
-        d3d11
-        dxgi
-        d3dcompiler
-        ws2_32
-        mfplat
-        mf
-        mfreadwrite
-        mfuuid
-    )
 else()
     set(PLATFORM_SOURCES
         src/platform/linux/LnxPacketReceiver.cpp
-        src/platform/linux/LnxFrameDecoder.cpp
         src/platform/linux/LnxFrameRenderer.cpp
         src/application/Consumer.cpp
     )
 
     set(PLATFORM_HEADERS
         src/platform/linux/LnxPacketReceiver.hpp
-        src/platform/linux/LnxFrameDecoder.hpp
         src/platform/linux/LnxFrameRenderer.hpp
         src/application/Consumer.hpp
-    )
-
-    find_package(PkgConfig REQUIRED)
-    pkg_check_modules(SDL2 REQUIRED IMPORTED_TARGET sdl2)
-    pkg_check_modules(FFMPEG REQUIRED IMPORTED_TARGET
-        libavcodec
-        libavutil
-    )
-
-    set(PLATFORM_LIBS
-        PkgConfig::SDL2
-        PkgConfig::FFMPEG
     )
 endif()
 
@@ -139,13 +134,20 @@ target_include_directories(${PROJECT_NAME}
         ${CMAKE_CURRENT_SOURCE_DIR}/src/application
 )
 
+if(WIN32)
+    target_include_directories(${PROJECT_NAME} PRIVATE ${FFMPEG_INCLUDE_DIR})
+endif()
+
 target_link_libraries(${PROJECT_NAME}
     PRIVATE
         Qt6::Quick
         Qt6::QuickControls2
-		zfec::zfec
+        zfec::zfec
+        ${FFMPEG_LIBS}
         ${PLATFORM_LIBS}
 )
+
+# Post Build
 
 if(WIN32)
     target_compile_definitions(${PROJECT_NAME}
@@ -155,10 +157,8 @@ if(WIN32)
     )
 
     set_target_properties(${PROJECT_NAME} PROPERTIES WIN32_EXECUTABLE FALSE)
-endif()
 
-# Qt .dll copy
-if(WIN32)
+    # Qt .dll copy
     add_custom_command(TARGET ${PROJECT_NAME} POST_BUILD
         COMMAND ${CMAKE_COMMAND} -E env PATH="${Qt6_DIR}/../../../bin"
         windeployqt --qmldir ${CMAKE_CURRENT_SOURCE_DIR} $<TARGET_FILE:${PROJECT_NAME}>

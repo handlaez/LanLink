@@ -1,13 +1,9 @@
-#include "LnxFrameDecoder.hpp"
+#include "UnifiedFrameDecoder.hpp"
 #include "Logger.hpp"
-
-extern "C" {
-#include <libavcodec/avcodec.h>
-}
 
 #include <cstring>
 
-LnxFrameDecoder::~LnxFrameDecoder()
+FrameDecoder::~FrameDecoder()
 {
     flush();
 
@@ -24,7 +20,7 @@ LnxFrameDecoder::~LnxFrameDecoder()
     }
 }
 
-bool LnxFrameDecoder::initialize()
+bool FrameDecoder::initialize()
 {
     if (m_context || m_packet || m_frame) {
         return false;
@@ -72,7 +68,7 @@ bool LnxFrameDecoder::initialize()
     return true;
 }
 
-bool LnxFrameDecoder::sendPacket(
+bool FrameDecoder::sendPacket(
     const EncodedFrame& encodedFrame)
 {
     if (!m_context || !m_packet) {
@@ -102,7 +98,7 @@ bool LnxFrameDecoder::sendPacket(
     return avcodec_send_packet(m_context, m_packet) >= 0;
 }
 
-bool LnxFrameDecoder::receiveFrame(VideoFrame& outFrame)
+bool FrameDecoder::receiveFrame(VideoFrame& outFrame)
 {
     if (!m_context || !m_frame) {
         return false;
@@ -127,7 +123,7 @@ bool LnxFrameDecoder::receiveFrame(VideoFrame& outFrame)
     return true;
 }
 
-void LnxFrameDecoder::flush()
+void FrameDecoder::flush()
 {
     if (!m_context) {
         return;

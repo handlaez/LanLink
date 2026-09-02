@@ -3,6 +3,8 @@
 
 #include <winsock2.h>
 #include <ws2tcpip.h>
+#include <algorithm>
+#include <climits>
 
 namespace {
     constexpr int kReceiveBufferSize = 8 * 1024 * 1024;
@@ -24,9 +26,7 @@ bool WinPacketReceiver::initialize(uint16_t port)
 
     WSADATA wsaData{};
 
-    const int wsaResult = WSAStartup(
-        MAKEWORD(2, 2),
-        &wsaData);
+    const int wsaResult = WSAStartup(MAKEWORD(2, 2), &wsaData);
 
     if (wsaResult != 0) {
         logger().error("Failed to initialize Winsock");
@@ -98,12 +98,7 @@ int WinPacketReceiver::receivePacket(
 
     timeval timeout = kSelectTimeout;
 
-    const int result = ::select(
-        0,
-        &readSet,
-        nullptr,
-        nullptr,
-        &timeout);
+    const int result = ::select(0, &readSet, nullptr, nullptr, &timeout);
 
     if (result == SOCKET_ERROR) {
         const int error = WSAGetLastError();
@@ -124,14 +119,9 @@ int WinPacketReceiver::receivePacket(
         return 0;
     }
 
-    const int receiveCapacity = static_cast<int>(
-        std::min(maxCapacity, static_cast<size_t>(INT_MAX)));
+    const int receiveCapacity = static_cast<int>(std::min(maxCapacity, static_cast<size_t>(INT_MAX)));
 
-    const int received = ::recv(
-        m_socket,
-        reinterpret_cast<char*>(buffer),
-        receiveCapacity,
-        0);
+    const int received = ::recv(m_socket, reinterpret_cast<char*>(buffer), receiveCapacity, 0);
 
     if (received == SOCKET_ERROR) {
         const int error = WSAGetLastError();
