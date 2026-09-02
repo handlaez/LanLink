@@ -26,25 +26,41 @@ Window {
             Layout.alignment: Qt.AlignHCenter
         }
 
+        ComboBox {
+            id: modeBox
+
+            model: ["Transmit", "Receive"]
+
+            enabled: !controller.isStreaming
+            Layout.fillWidth: true
+        }
+
         TextField {
             id: ipInput
+
             text: "192.168.0.100"
             placeholderText: "IP Address"
-            enabled: !controller.isStreaming
+
+            enabled: !controller.isStreaming && modeBox.currentIndex === 0
+
             Layout.fillWidth: true
         }
 
         TextField {
             id: portInput
+
             text: "5000"
             placeholderText: "Port"
+
             enabled: !controller.isStreaming
+            inputMethodHints: Qt.ImhDigitsOnly
+
             Layout.fillWidth: true
         }
 
         Button {
             text: controller.isStreaming ? "Stop" : "Start"
-            
+
             palette.buttonText: "#000000"
 
             Layout.preferredWidth: 140
@@ -53,8 +69,18 @@ Window {
             onClicked: {
                 if (controller.isStreaming) {
                     controller.stop()
+                    return
+                }
+
+                const port = parseInt(portInput.text)
+
+                if (modeBox.currentIndex === 0) {
+                    controller.startProducer(
+                        ipInput.text,
+                        port
+                    )
                 } else {
-                    controller.start(ipInput.text, parseInt(portInput.text))
+                    controller.startConsumer(port)
                 }
             }
         }
@@ -84,7 +110,11 @@ Window {
                 Text {
                     id: logText
 
-                    width: Math.max(logFlickable.width, implicitWidth)
+                    width: Math.max(
+                        logFlickable.width,
+                        implicitWidth
+                    )
+
                     height: implicitHeight
 
                     text: controller.logLines.join("\n")
@@ -101,7 +131,12 @@ Window {
 
                     function onLogLinesChanged() {
                         Qt.callLater(function() {
-                            logFlickable.contentY = Math.max(0, logFlickable.contentHeight - logFlickable.height )
+                            logFlickable.contentY =
+                                Math.max(
+                                    0,
+                                    logFlickable.contentHeight -
+                                    logFlickable.height
+                                )
                         })
                     }
                 }

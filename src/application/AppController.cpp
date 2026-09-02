@@ -21,8 +21,9 @@ AppController::~AppController()
 	stop();
 }
 
-void AppController::start(const QString& ip, int port) {
-    if (isStreaming_) 
+Q_INVOKABLE void AppController::startProducer(const QString& ip, int port)
+{
+    if (isStreaming_)
         return;
 
     QHostAddress address;
@@ -39,13 +40,14 @@ void AppController::start(const QString& ip, int port) {
     setStatusText("Initializing...");
     setStreaming(true);
 
-    std::string ipStd = ip.toStdString();
-    uint16_t portNum = static_cast<uint16_t>(port);
+    const std::string ipStd = ip.toStdString();
+    const uint16_t portNum = static_cast<uint16_t>(port);
 
     running_.store(true);
+
     workerThread_ = QThread::create([this, ipStd, portNum]() {
-#ifdef _WIN32
         Producer app;
+
         if (!app.initialize(ipStd.c_str(), portNum)) {
             QMetaObject::invokeMethod(this, [this]() {
                 setStatusText("Failed to initialize Producer.");
@@ -53,10 +55,42 @@ void AppController::start(const QString& ip, int port) {
                 });
             return;
         }
-        QMetaObject::invokeMethod(this, [this]() { setStatusText("Streaming..."); });
+
+        QMetaObject::invokeMethod(this, [this]() {
+            setStatusText("Streaming...");
+            });
+
         app.run(running_);
-#else
+
+        QMetaObject::invokeMethod(this, [this]() {
+            setStatusText("Stopped");
+            setStreaming(false);
+            });
+        });
+
+    workerThread_->start();
+}
+
+Q_INVOKABLE void AppController::startConsumer(int port)
+{
+    if (isStreaming_)
+        return;
+
+    if (port < 1 || port > 65535) {
+        setStatusText("Invalid port.");
+        return;
+    }
+
+    setStatusText("Initializing...");
+    setStreaming(true);
+
+    const uint16_t portNum = static_cast<uint16_t>(port);
+
+    running_.store(true);
+
+    workerThread_ = QThread::create([this, portNum]() {
         Consumer app;
+
         if (!app.initialize(portNum)) {
             QMetaObject::invokeMethod(this, [this]() {
                 setStatusText("Failed to initialize Consumer.");
@@ -64,9 +98,12 @@ void AppController::start(const QString& ip, int port) {
                 });
             return;
         }
-        QMetaObject::invokeMethod(this, [this]() { setStatusText("Receiving..."); });
+
+        QMetaObject::invokeMethod(this, [this]() {
+            setStatusText("Receiving...");
+            });
+
         app.run(running_);
-#endif
 
         QMetaObject::invokeMethod(this, [this]() {
             setStatusText("Stopped");

@@ -9,9 +9,13 @@
 
 #ifdef _WIN32
 #include "Producer.hpp"
-#else
-#include "Consumer.hpp"
 #endif
+#include "Consumer.hpp"
+
+enum class Mode {
+    Producer,
+    Consumer
+};
 
 class AppController : public QObject {
     Q_OBJECT
@@ -28,7 +32,8 @@ public:
     QString statusText() const { return statusText_; }
     QStringList logLines() const { return logLines_; }
 
-    Q_INVOKABLE void start(const QString& ip, int port);
+    Q_INVOKABLE void startProducer(const QString& ip, int port);
+    Q_INVOKABLE void startConsumer(int port);
     Q_INVOKABLE void stop();
 
 public slots:
