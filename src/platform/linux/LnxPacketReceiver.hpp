@@ -3,10 +3,10 @@
 
 #include "common/IPacketReceiver.hpp"
 
-class LnxPacketReceiver final : public IPacketReceiver {
+class PacketReceiver final : public IPacketReceiver {
 public:
-    LnxPacketReceiver() = default;
-    ~LnxPacketReceiver() override;
+    PacketReceiver() = default;
+    ~PacketReceiver() override;
 
     bool initialize(uint16_t port) override;
 

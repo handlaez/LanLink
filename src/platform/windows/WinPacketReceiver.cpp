@@ -15,12 +15,12 @@ namespace {
     };
 }
 
-WinPacketReceiver::~WinPacketReceiver()
+PacketReceiver::~PacketReceiver()
 {
     close();
 }
 
-bool WinPacketReceiver::initialize(uint16_t port)
+bool PacketReceiver::initialize(uint16_t port)
 {
     close();
 
@@ -82,7 +82,7 @@ bool WinPacketReceiver::initialize(uint16_t port)
     return true;
 }
 
-int WinPacketReceiver::receivePacket(
+int PacketReceiver::receivePacket(
     uint8_t* buffer,
     size_t maxCapacity)
 {
@@ -136,7 +136,7 @@ int WinPacketReceiver::receivePacket(
     return received;
 }
 
-void WinPacketReceiver::close()
+void PacketReceiver::close()
 {
     if (m_socket != INVALID_SOCKET) {
         ::closesocket(m_socket);

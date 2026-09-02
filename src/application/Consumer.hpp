@@ -3,12 +3,17 @@
 
 #include <atomic>
 
-#include "platform/linux/LnxFrameDecoder.hpp"
-#include "platform/linux/LnxFrameRenderer.hpp"
-#include "platform/linux/LnxPacketReceiver.hpp"
+#include "common/UnifiedFrameDecoder.hpp"
+#include "common/UnifiedFrameRenderer.hpp"
 #include "common/UnifiedDepacketizer.hpp"
 #include "common/UnifiedFecDepacketizer.hpp"
 #include "common/UDPFrameHeader.hpp"
+
+#ifdef _WIN32
+#include "platform/windows/WinPacketReceiver.hpp"
+#else
+#include "platform/linux/LnxPacketReceiver.hpp"
+#endif
 
 class Consumer {
 public:
@@ -16,11 +21,11 @@ public:
 	void run(const std::atomic<bool>& running);
 
 private:
-	LnxPacketReceiver receiver_;
+	PacketReceiver receiver_;
 	FecDepacketizer fecDepacketizer_;
 	UnifiedDepacketizer depacketizer_;
-	LnxFrameDecoder decoder_;
-	LnxFrameRenderer renderer_;
+	FrameDecoder decoder_;
+	FrameRenderer renderer_;
 
 	bool rendererInitialized_;
 

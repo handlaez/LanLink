@@ -5,10 +5,10 @@
 
 #include <winsock2.h>
 
-class WinPacketReceiver final : public IPacketReceiver {
+class PacketReceiver final : public IPacketReceiver {
 public:
-    WinPacketReceiver() = default;
-    ~WinPacketReceiver() override;
+    PacketReceiver() = default;
+    ~PacketReceiver() override;
 
     bool initialize(uint16_t port) override;
 

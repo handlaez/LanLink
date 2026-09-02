@@ -16,12 +16,12 @@ namespace {
     };
 }
 
-LnxPacketReceiver::~LnxPacketReceiver()
+PacketReceiver::~PacketReceiver()
 {
     close();
 }
 
-bool LnxPacketReceiver::initialize(uint16_t port)
+bool PacketReceiver::initialize(uint16_t port)
 {
     close();
 
@@ -61,7 +61,7 @@ bool LnxPacketReceiver::initialize(uint16_t port)
     return true;
 }
 
-int LnxPacketReceiver::receivePacket(
+int PacketReceiver::receivePacket(
     uint8_t* buffer,
     size_t maxCapacity)
 {
@@ -107,7 +107,7 @@ int LnxPacketReceiver::receivePacket(
     return static_cast<int>(received);
 }
 
-void LnxPacketReceiver::close()
+void PacketReceiver::close()
 {
     if (m_socket >= 0) {
         ::close(m_socket);

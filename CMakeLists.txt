@@ -30,7 +30,17 @@ if(WIN32)
     set(FFMPEG_LIBS ${AVCODEC_LIBRARY} ${AVFORMAT_LIBRARY} ${AVUTIL_LIBRARY})
     
     # Windows system libraries
-    set(PLATFORM_LIBS d3d11 dxgi d3dcompiler ws2_32 mfplat mf mfreadwrite mfuuid)
+    set(PLATFORM_LIBS 
+        d3d11
+        dxgi
+        d3dcompiler
+        ws2_32
+        mfplat
+        mf
+        mfreadwrite
+        mfuuid
+        SDL2::SDL2
+    )
 else()
     # --- Linux Dependencies (via pkg-config) ---
     find_package(PkgConfig REQUIRED)
@@ -52,6 +62,7 @@ set(COMMON_SOURCES
     src/common/UnifiedFecDepacketizer.cpp
     src/common/UnifiedFrameDecoder.cpp
     src/common/UnifiedFrameRenderer.cpp
+    src/application/Consumer.cpp
 )
 
 set(COMMON_HEADERS
@@ -72,6 +83,7 @@ set(COMMON_HEADERS
     src/common/UnifiedFecDepacketizer.hpp
     src/common/UnifiedFrameDecoder.hpp
     src/common/UnifiedFrameRenderer.hpp
+    src/application/Consumer.hpp
 )
 
 # --- Platform Specific Configurations ---
@@ -96,12 +108,10 @@ if(WIN32)
 else()
     set(PLATFORM_SOURCES
         src/platform/linux/LnxPacketReceiver.cpp
-        src/application/Consumer.cpp
     )
 
     set(PLATFORM_HEADERS
         src/platform/linux/LnxPacketReceiver.hpp
-        src/application/Consumer.hpp
     )
 endif()
 

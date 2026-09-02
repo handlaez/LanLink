@@ -7,17 +7,17 @@
 #include <iostream>
 #include <atomic>
 
+#include "src/application/Consumer.hpp"
 #include "src/application/UnifiedArgParser.hpp"
 #ifdef _WIN32
 #include "src/application/Producer.hpp"
-#else
-#include "src/application/Consumer.hpp"
 #endif
 
 int main(int argc, char* argv[])
 {
     try {
         const Config config = ArgParser::parse(argc, argv);
+        // a temporary bool (testing)
         std::atomic<bool> running = true;
 
         if (!config.gui) {
@@ -33,7 +33,9 @@ int main(int argc, char* argv[])
             }
             else {
 #ifdef _WIN32
-                std::cerr << "Consumer mode is not yet implemented on Windows. Sorry!\n";
+                Consumer consumer;
+                consumer.initialize(config.port);
+                consumer.run(running);
 #else
                 Consumer consumer;
                 consumer.initialize(config.port);
