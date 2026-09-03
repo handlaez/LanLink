@@ -108,10 +108,12 @@ if(WIN32)
 else()
     set(PLATFORM_SOURCES
         src/platform/linux/LnxPacketReceiver.cpp
+        src/platform/linux/LnxPacketSender.cpp
     )
 
     set(PLATFORM_HEADERS
         src/platform/linux/LnxPacketReceiver.hpp
+        src/platform/linux/LnxPacketSender.hpp
     )
 endif()
 
