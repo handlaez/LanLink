@@ -25,7 +25,7 @@ bool Consumer::initialize(uint16_t port)
 
 void Consumer::run(const std::atomic<bool>& running)
 {
-    std::vector<uint8_t> packetBuffer(1500);
+    std::vector<uint8_t> packetBuffer(65536);
     std::vector<Packet> fecPackets;
 
     while (running.load(std::memory_order_relaxed)) {

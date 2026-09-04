@@ -27,7 +27,7 @@ private:
 	FrameDecoder decoder_;
 	FrameRenderer renderer_;
 
-	bool rendererInitialized_;
+	bool rendererInitialized_ = false;
 
 	std::vector<Packet> fecPackets;
 };
