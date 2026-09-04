@@ -17,7 +17,7 @@ public:
 	WinFrameConverter& operator=(const WinFrameConverter&) = delete;
 
 	bool Initialize(uint32_t width, uint32_t height) override;
-	bool ConvertBgraToNv12(const ConversionParams& params) override;
+	bool Convert(const ConversionParams& params) override;
 
 private:
 	void CreateComputeShader();

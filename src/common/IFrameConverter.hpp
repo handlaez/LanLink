@@ -14,7 +14,7 @@ class IFrameConverter {
 public:
     virtual ~IFrameConverter() = default;
     virtual bool Initialize(uint32_t width, uint32_t height) = 0;
-    virtual bool ConvertBgraToNv12(const ConversionParams& params) = 0;
+    virtual bool Convert(const ConversionParams& params) = 0;
 };
 
 #endif

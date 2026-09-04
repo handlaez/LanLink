@@ -122,7 +122,8 @@ void WinFrameConverter::RecreateViewsForOutput(ID3D11Texture2D* pOutputNv12) {
     m_lastOutputTexture = pOutputNv12;
 }
 
-bool WinFrameConverter::ConvertBgraToNv12(const ConversionParams& params) {
+// BGRA --> RGBA
+bool WinFrameConverter::Convert(const ConversionParams& params) {
     if (!m_initialized) return false;
 
     auto* pInputBgra = static_cast<ID3D11Texture2D*>(params.inputNativeResource.nativeResource);

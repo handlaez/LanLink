@@ -152,7 +152,7 @@ void Producer::run(std::atomic<bool>& running)
         params.inputNativeResource = bgraFrame;
         params.outputNativeResource = nv12Frame_;
 
-        if (frameConverter_->ConvertBgraToNv12(params)) {
+        if (frameConverter_->Convert(params)) {
             nv12Frame_.timestamp = now100ns();
 
             frameEncoder_->SubmitFrame(nv12Frame_);
