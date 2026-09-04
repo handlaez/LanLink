@@ -48,7 +48,7 @@ else()
     pkg_check_modules(FFMPEG REQUIRED IMPORTED_TARGET libavcodec libavformat libavutil)
     
     set(FFMPEG_LIBS PkgConfig::FFMPEG)
-    set(PLATFORM_LIBS PkgConfig::SDL2)
+    set(PLATFORM_LIBS SDL2::SDL2)
 endif()
 
 # --- Common Sources ---

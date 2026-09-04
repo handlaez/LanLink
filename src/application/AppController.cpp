@@ -23,6 +23,7 @@ AppController::~AppController()
 
 Q_INVOKABLE void AppController::startProducer(const QString& ip, int port)
 {
+#ifdef _WIN32
     if (isStreaming_)
         return;
 
@@ -69,6 +70,9 @@ Q_INVOKABLE void AppController::startProducer(const QString& ip, int port)
         });
 
     workerThread_->start();
+#else
+    return;
+#endif
 }
 
 Q_INVOKABLE void AppController::startConsumer(int port)
