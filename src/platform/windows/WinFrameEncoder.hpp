@@ -12,11 +12,11 @@
 
 #include "common/IFrameEncoder.hpp"
 
-class WinFrameEncoder : public IFrameEncoder
+class FrameEncoder : public IFrameEncoder
 {
 public:
-    WinFrameEncoder(ID3D11Device* device, ID3D11DeviceContext* context);
-    ~WinFrameEncoder() override;
+    FrameEncoder(ID3D11Device* device, ID3D11DeviceContext* context);
+    ~FrameEncoder() override;
 
     bool Initialize(uint32_t width, uint32_t height, uint32_t fps, uint32_t bitrate) override;
     bool SubmitFrame(const VideoFrame& frame) override;

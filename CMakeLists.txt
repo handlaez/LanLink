@@ -115,6 +115,7 @@ else()
         src/platform/linux/LnxPacketSender.cpp
         src/platform/linux/LnxFrameConverter.cpp
         src/platform/linux/LnxFrameGrabber.cpp
+        src/platform/linux/LnxFrameEncoder.cpp
     )
 
     set(PLATFORM_HEADERS
@@ -123,6 +124,7 @@ else()
         src/platform/linux/LnxFrameConverter.hpp
         src/platform/linux/LnxFrameGrabber.hpp
         src/platform/linux/LnxFrame.hpp
+        src/platform/linux/LnxFrameEncoder.hpp
     )
 endif()
 

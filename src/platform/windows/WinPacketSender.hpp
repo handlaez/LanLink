@@ -6,10 +6,10 @@
 
 #include "common/IPacketSender.hpp"
 
-class WinPacketSender : public IPacketSender {
+class PacketSender : public IPacketSender {
 public:
-	WinPacketSender();
-	~WinPacketSender();
+	PacketSender();
+	~PacketSender();
 
 	bool Open(const std::string& host, uint16_t port) override;
 	bool Send(std::span<const uint8_t> bytes) override;

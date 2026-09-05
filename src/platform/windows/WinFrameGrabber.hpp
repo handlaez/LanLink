@@ -7,7 +7,7 @@
 
 #include "common/IFrameGrabber.hpp"
 
-class WinFrameGrabber : public IFrameGrabber {
+class FrameGrabber : public IFrameGrabber {
 public: 
 	bool Initialize() override;
 	bool CaptureFrame(VideoFrame& outFrame) override;

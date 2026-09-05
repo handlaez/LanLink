@@ -1,18 +1,18 @@
 #include "WinPacketSender.hpp"
 
-WinPacketSender::WinPacketSender()
+PacketSender::PacketSender()
 {
 	WSADATA wsaData;
 	WSAStartup(MAKEWORD(2, 2), &wsaData);
 }
 
-WinPacketSender::~WinPacketSender()
+PacketSender::~PacketSender()
 {
 	Close();
 	WSACleanup();
 }
 
-bool WinPacketSender::Open(const std::string& host, uint16_t port)
+bool PacketSender::Open(const std::string& host, uint16_t port)
 {
 	Close();
 
@@ -38,7 +38,7 @@ bool WinPacketSender::Open(const std::string& host, uint16_t port)
 	return true;
 }
 
-bool WinPacketSender::Send(std::span<const uint8_t> bytes)
+bool PacketSender::Send(std::span<const uint8_t> bytes)
 {
 	if (m_socket == INVALID_SOCKET) 
 		return false;
@@ -47,7 +47,7 @@ bool WinPacketSender::Send(std::span<const uint8_t> bytes)
 	return sent == static_cast<int>(bytes.size());
 }
 
-void WinPacketSender::Close()
+void PacketSender::Close()
 {
 	if (m_socket != INVALID_SOCKET) {
 		closesocket(m_socket);

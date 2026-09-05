@@ -1,4 +1,6 @@
 #include <d3dcompiler.h>
+#include <cstring>
+#include <string>
 
 #include "WinFrameConverter.hpp"
 #include "Logger.hpp"
@@ -37,15 +39,15 @@ void main(uint2 pos : SV_DispatchThreadID)
 }
 )";
 
-WinFrameConverter::WinFrameConverter(ID3D11Device* device, ID3D11DeviceContext* context)
+FrameConverter::FrameConverter(ID3D11Device* device, ID3D11DeviceContext* context)
     : device_(device), context_(context)
 {
     if (!device_ || !context_) {
-        throw std::invalid_argument("WinFrameConverter: Device and Context cannot be null.");
+        throw std::invalid_argument("FrameConverter: Device and Context cannot be null.");
     }
 }
 
-bool WinFrameConverter::Initialize(uint32_t width, uint32_t height)
+bool FrameConverter::Initialize(uint32_t width, uint32_t height)
 {
     if (width == 0 || height == 0) {
         return false;
@@ -68,12 +70,12 @@ bool WinFrameConverter::Initialize(uint32_t width, uint32_t height)
         return true;
     }
     catch (const std::exception& e) {
-        logger().error(QString("WinFrameConverter: %1").arg(e.what()));
+        logger().error(QString("FrameConverter: %1").arg(e.what()));
         return false;
     }
 }
 
-void WinFrameConverter::CreateComputeShader() {
+void FrameConverter::CreateComputeShader() {
     UINT compileFlags = D3DCOMPILE_ENABLE_STRICTNESS;
 #if defined(_DEBUG)
     compileFlags |= D3DCOMPILE_DEBUG | D3DCOMPILE_SKIP_OPTIMIZATION;
@@ -110,7 +112,7 @@ void WinFrameConverter::CreateComputeShader() {
     }
 }
 
-void WinFrameConverter::CreateOutputTexture()
+void FrameConverter::CreateOutputTexture()
 {
     D3D11_TEXTURE2D_DESC desc{};
 
@@ -126,11 +128,11 @@ void WinFrameConverter::CreateOutputTexture()
     HRESULT hr = device_->CreateTexture2D(&desc, nullptr, &outputTexture_);
 
     if (FAILED(hr)) {
-        throw std::runtime_error("WinFrameConverter: Failed to create NV12 output texture.");
+        throw std::runtime_error("FrameConverter: Failed to create NV12 output texture.");
     }
 }
 
-void WinFrameConverter::RecreateViewsForOutput(ID3D11Texture2D* pOutputNv12) {
+void FrameConverter::RecreateViewsForOutput(ID3D11Texture2D* pOutputNv12) {
     uavY_.Reset();
     uavUV_.Reset();
 
@@ -141,7 +143,8 @@ void WinFrameConverter::RecreateViewsForOutput(ID3D11Texture2D* pOutputNv12) {
     uavYDesc.Texture2D.MipSlice = 0;
 
     HRESULT hr = device_->CreateUnorderedAccessView(pOutputNv12, &uavYDesc, &uavY_);
-    if (FAILED(hr)) throw std::runtime_error("Failed to create UAV for Y plane.");
+    if (FAILED(hr)) 
+        throw std::runtime_error("Failed to create UAV for Y plane.");
 
     // UV channels (DXGI_FORMAT_R8G8_UNORM)
     D3D11_UNORDERED_ACCESS_VIEW_DESC uavUVDesc{};
@@ -150,20 +153,24 @@ void WinFrameConverter::RecreateViewsForOutput(ID3D11Texture2D* pOutputNv12) {
     uavUVDesc.Texture2D.MipSlice = 0;
 
     hr = device_->CreateUnorderedAccessView(pOutputNv12, &uavUVDesc, &uavUV_);
-    if (FAILED(hr)) throw std::runtime_error("Failed to create UAV for UV plane.");
-
-    lastOutputTexture_ = pOutputNv12;
+    
+    if (FAILED(hr)) 
+        throw std::runtime_error("Failed to create UAV for UV plane.");
 }
 
-// BGRA --> RGBA
-bool WinFrameConverter::Convert(const VideoFrame& input, VideoFrame& output)
+// BGRA texture --> NV12 texture
+bool FrameConverter::Convert(const VideoFrame& input, VideoFrame& output)
 {
     if (!initialized_) {
         return false;
     }
 
-    auto* pInputBgra =
-        static_cast<ID3D11Texture2D*>(input.nativeResource);
+    if (input.width != width_ || input.height != height_) {
+        logger().error("FrameConverter: Input dimensions do not match output dimensions.");
+        return false;
+    }
+
+    auto* pInputBgra = static_cast<ID3D11Texture2D*>(input.nativeResource);
 
     if (!pInputBgra || !outputTexture_) {
         return false;
@@ -195,7 +202,7 @@ bool WinFrameConverter::Convert(const VideoFrame& input, VideoFrame& output)
         }
 
         inputSRV = newSrv.Get();
-        srvCache_[pInputBgra] = newSrv;
+        srvCache_.emplace(pInputBgra, newSrv);
     }
 
     // bind 
@@ -234,6 +241,7 @@ bool WinFrameConverter::Convert(const VideoFrame& input, VideoFrame& output)
     context_->CSSetShaderResources(0, 1, nullSRVs);
 
     output = outputFrame_;
+    output.timestamp = input.timestamp;
 
     return true;
 }

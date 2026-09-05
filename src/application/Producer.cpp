@@ -6,7 +6,10 @@
 #include <thread>
 #include <vector>
 
-#include <windows.h>
+#ifdef _WIN32
+#include <Windows.h>
+#endif // _WIN32
+
 
 namespace {
     uint64_t now100ns()
@@ -16,11 +19,11 @@ namespace {
         return duration_cast<duration<uint64_t, std::ratio<1, 10'000'000>>>(steady_clock::now().time_since_epoch()).count();
     }
 
-    bool queryFrameDimensions(WinFrameGrabber& grabber, uint32_t& outWidth, uint32_t& outHeight)
+    bool queryFrameDimensions(FrameGrabber& grabber, uint32_t& outWidth, uint32_t& outHeight)
     {
         VideoFrame frame{};
 
-        for (int i = 0; i < 40; ++i) {
+        for (int i = 0; i < 20; ++i) {
             if (grabber.CaptureFrame(frame)) {
                 auto* texture = static_cast<ID3D11Texture2D*>(frame.nativeResource);
 
@@ -44,32 +47,6 @@ namespace {
 
         return false;
     }
-
-    Microsoft::WRL::ComPtr<ID3D11Texture2D> createNv12Texture(ID3D11Device* device, uint32_t width, uint32_t height)
-    {
-        if (!device || width == 0 || height == 0) {
-            return nullptr;
-        }
-
-        D3D11_TEXTURE2D_DESC desc{};
-        desc.Width = width;
-        desc.Height = height;
-        desc.MipLevels = 1;
-        desc.ArraySize = 1;
-        desc.Format = DXGI_FORMAT_NV12;
-        desc.SampleDesc.Count = 1;
-        desc.Usage = D3D11_USAGE_DEFAULT;
-        desc.BindFlags = D3D11_BIND_UNORDERED_ACCESS | D3D11_BIND_SHADER_RESOURCE;
-
-        Microsoft::WRL::ComPtr<ID3D11Texture2D> texture;
-
-        if (FAILED(device->CreateTexture2D(&desc, nullptr, &texture))) {
-            return nullptr;
-        }
-
-        return texture;
-    }
-
 } // namespace
 
 bool Producer::initialize(const std::string& address, uint16_t port)
@@ -86,18 +63,7 @@ bool Producer::initialize(const std::string& address, uint16_t port)
 
     logger().info(QString("Width: %1 Height: %2").arg(width_).arg(height_));
 
-    nv12Texture_ = createNv12Texture(frameGrabber_.getDevice(), width_, height_);
-
-    if (!nv12Texture_) {
-        logger().error("Failed to create GPU NV12 texture.");
-        return false;
-    }
-
-    nv12Frame_.nativeResource = nv12Texture_.Get();
-    nv12Frame_.width = width_;
-    nv12Frame_.height = height_;
-
-    frameConverter_ = std::make_unique<WinFrameConverter>(
+    frameConverter_ = std::make_unique<FrameConverter>(
         frameGrabber_.getDevice(),
         frameGrabber_.getContext());
 
@@ -106,7 +72,7 @@ bool Producer::initialize(const std::string& address, uint16_t port)
         return false;
     }
 
-    frameEncoder_ = std::make_unique<WinFrameEncoder>(
+    frameEncoder_ = std::make_unique<FrameEncoder>(
         frameGrabber_.getDevice(),
         frameGrabber_.getContext());
 
@@ -148,12 +114,12 @@ void Producer::run(std::atomic<bool>& running)
             continue;
         }
 
-        VideoFrame nv12Frame_{};
+        VideoFrame convertedFrame{};
+        convertedFrame.timestamp = now100ns();
 
-        if (frameConverter_->Convert(bgraFrame, nv12Frame_)) {
-            nv12Frame_.timestamp = now100ns();
+        if (frameConverter_->Convert(bgraFrame, convertedFrame)) {
 
-            frameEncoder_->SubmitFrame(nv12Frame_);
+            frameEncoder_->SubmitFrame(convertedFrame);
 
             // yes, a very crude way of doing that. It's temporary.
             std::this_thread::sleep_for(std::chrono::milliseconds(8));

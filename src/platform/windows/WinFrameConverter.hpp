@@ -8,13 +8,13 @@
 
 #include "common/IFrameConverter.hpp"
 
-class WinFrameConverter final : public IFrameConverter {
+class FrameConverter final : public IFrameConverter {
 public:
-	explicit WinFrameConverter(ID3D11Device* device, ID3D11DeviceContext* context);
-	~WinFrameConverter() override = default;
+	explicit FrameConverter(ID3D11Device* device, ID3D11DeviceContext* context);
+	~FrameConverter() override = default;
 
-	WinFrameConverter(const WinFrameConverter&) = delete;
-	WinFrameConverter& operator=(const WinFrameConverter&) = delete;
+	FrameConverter(const FrameConverter&) = delete;
+	FrameConverter& operator=(const FrameConverter&) = delete;
 
 	bool Initialize(uint32_t width, uint32_t height) override;
 	bool Convert(const VideoFrame& input, VideoFrame& output) override;
@@ -35,7 +35,6 @@ private:
 	VideoFrame outputFrame_{};
 
 	// cache views for the current output texture
-	ID3D11Texture2D* lastOutputTexture_ = nullptr;
 	Microsoft::WRL::ComPtr<ID3D11UnorderedAccessView> uavY_;
 	Microsoft::WRL::ComPtr<ID3D11UnorderedAccessView> uavUV_;
 

@@ -1,7 +1,7 @@
 #include "WinFrameGrabber.hpp"
 #include "Logger.hpp"
 
-bool WinFrameGrabber::Initialize()
+bool FrameGrabber::Initialize()
 {
 	HRESULT hr;
 	UINT flags = D3D11_CREATE_DEVICE_BGRA_SUPPORT | D3D11_CREATE_DEVICE_VIDEO_SUPPORT;
@@ -59,7 +59,7 @@ bool WinFrameGrabber::Initialize()
 	return true;
 }
 
-bool WinFrameGrabber::CaptureFrame(VideoFrame& outFrame)
+bool FrameGrabber::CaptureFrame(VideoFrame& outFrame)
 {
 	DXGI_OUTDUPL_FRAME_INFO frameInfo{};
 
@@ -100,7 +100,7 @@ bool WinFrameGrabber::CaptureFrame(VideoFrame& outFrame)
 	return true;
 }
 
-void WinFrameGrabber::ReleaseFrame()
+void FrameGrabber::ReleaseFrame()
 {
 	acquiredTexture_.Reset();
 
@@ -108,12 +108,12 @@ void WinFrameGrabber::ReleaseFrame()
 		duplication_->ReleaseFrame();
 }
 
-ID3D11Device* WinFrameGrabber::getDevice() const
+ID3D11Device* FrameGrabber::getDevice() const
 {
 	return device_.Get();
 }
 
-ID3D11DeviceContext* WinFrameGrabber::getContext() const
+ID3D11DeviceContext* FrameGrabber::getContext() const
 {
 	return context_.Get();
 }

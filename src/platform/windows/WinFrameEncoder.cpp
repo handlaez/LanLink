@@ -1,17 +1,17 @@
 #include "Logger.hpp"
 #include "WinFrameEncoder.hpp"
 
-WinFrameEncoder::WinFrameEncoder(ID3D11Device* device, ID3D11DeviceContext* context)
+FrameEncoder::FrameEncoder(ID3D11Device* device, ID3D11DeviceContext* context)
 	: device_(device), context_(context)
 {
 }
 
-WinFrameEncoder::~WinFrameEncoder()
+FrameEncoder::~FrameEncoder()
 {
 	Shutdown();
 }
 
-bool WinFrameEncoder::Initialize(uint32_t width, uint32_t height, uint32_t fps, uint32_t bitrate)
+bool FrameEncoder::Initialize(uint32_t width, uint32_t height, uint32_t fps, uint32_t bitrate)
 {
     if (initialized_)
         return true;
@@ -163,7 +163,7 @@ bool WinFrameEncoder::Initialize(uint32_t width, uint32_t height, uint32_t fps, 
     return true;
 }
 
-bool WinFrameEncoder::SubmitFrame(const VideoFrame& frame)
+bool FrameEncoder::SubmitFrame(const VideoFrame& frame)
 {
     if (!initialized_)
         return false;
@@ -191,7 +191,7 @@ bool WinFrameEncoder::SubmitFrame(const VideoFrame& frame)
     return true;
 }
 
-bool WinFrameEncoder::ReceiveFrame(EncodedFrame& outFrame)
+bool FrameEncoder::ReceiveFrame(EncodedFrame& outFrame)
 {
     if (!initialized_)
         return false;
@@ -289,7 +289,7 @@ bool WinFrameEncoder::ReceiveFrame(EncodedFrame& outFrame)
     return true;
 }
 
-void WinFrameEncoder::Shutdown()
+void FrameEncoder::Shutdown()
 {
     if (!initialized_)
         return;
@@ -309,7 +309,7 @@ void WinFrameEncoder::Shutdown()
     initialized_ = false;
 }
 
-bool WinFrameEncoder::CreateInputSample(ID3D11Texture2D* texture, uint64_t timestamp, IMFSample** sample)
+bool FrameEncoder::CreateInputSample(ID3D11Texture2D* texture, uint64_t timestamp, IMFSample** sample)
 {
     Microsoft::WRL::ComPtr<IMFMediaBuffer> buffer;
 
