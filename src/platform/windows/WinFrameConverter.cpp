@@ -38,20 +38,33 @@ void main(uint2 pos : SV_DispatchThreadID)
 )";
 
 WinFrameConverter::WinFrameConverter(ID3D11Device* device, ID3D11DeviceContext* context)
-    : m_device(device), m_context(context)
+    : device_(device), context_(context)
 {
-    if (!m_device || !m_context) {
+    if (!device_ || !context_) {
         throw std::invalid_argument("WinFrameConverter: Device and Context cannot be null.");
     }
 }
 
-bool WinFrameConverter::Initialize(uint32_t width, uint32_t height) {
-    m_width = width;
-    m_height = height;
+bool WinFrameConverter::Initialize(uint32_t width, uint32_t height)
+{
+    if (width == 0 || height == 0) {
+        return false;
+    }
+
+    width_ = width;
+    height_ = height;
 
     try {
         CreateComputeShader();
-        m_initialized = true;
+        CreateOutputTexture();
+
+        outputFrame_.nativeResource = outputTexture_.Get();
+        outputFrame_.width = width;
+        outputFrame_.height = height;
+
+        RecreateViewsForOutput(outputTexture_.Get());
+
+        initialized_ = true;
         return true;
     }
     catch (const std::exception& e) {
@@ -90,16 +103,36 @@ void WinFrameConverter::CreateComputeShader() {
         throw std::runtime_error(errorMsg);
     }
 
-    hr = m_device->CreateComputeShader(shaderBlob->GetBufferPointer(), shaderBlob->GetBufferSize(), nullptr, &m_computeShader);
+    hr = device_->CreateComputeShader(shaderBlob->GetBufferPointer(), shaderBlob->GetBufferSize(), nullptr, &computeShader_);
 
     if (FAILED(hr)) {
         throw std::runtime_error("Failed to create DX11 Compute Shader.");
     }
 }
 
+void WinFrameConverter::CreateOutputTexture()
+{
+    D3D11_TEXTURE2D_DESC desc{};
+
+    desc.Width = width_;
+    desc.Height = height_;
+    desc.MipLevels = 1;
+    desc.ArraySize = 1;
+    desc.Format = DXGI_FORMAT_NV12;
+    desc.SampleDesc.Count = 1;
+    desc.Usage = D3D11_USAGE_DEFAULT;
+    desc.BindFlags = D3D11_BIND_UNORDERED_ACCESS | D3D11_BIND_SHADER_RESOURCE;
+
+    HRESULT hr = device_->CreateTexture2D(&desc, nullptr, &outputTexture_);
+
+    if (FAILED(hr)) {
+        throw std::runtime_error("WinFrameConverter: Failed to create NV12 output texture.");
+    }
+}
+
 void WinFrameConverter::RecreateViewsForOutput(ID3D11Texture2D* pOutputNv12) {
-    m_uavY.Reset();
-    m_uavUV.Reset();
+    uavY_.Reset();
+    uavUV_.Reset();
 
     // Y channel (DXGI_FORMAT_R8_UNORM)
     D3D11_UNORDERED_ACCESS_VIEW_DESC uavYDesc{};
@@ -107,7 +140,7 @@ void WinFrameConverter::RecreateViewsForOutput(ID3D11Texture2D* pOutputNv12) {
     uavYDesc.ViewDimension = D3D11_UAV_DIMENSION_TEXTURE2D;
     uavYDesc.Texture2D.MipSlice = 0;
 
-    HRESULT hr = m_device->CreateUnorderedAccessView(pOutputNv12, &uavYDesc, &m_uavY);
+    HRESULT hr = device_->CreateUnorderedAccessView(pOutputNv12, &uavYDesc, &uavY_);
     if (FAILED(hr)) throw std::runtime_error("Failed to create UAV for Y plane.");
 
     // UV channels (DXGI_FORMAT_R8G8_UNORM)
@@ -116,33 +149,29 @@ void WinFrameConverter::RecreateViewsForOutput(ID3D11Texture2D* pOutputNv12) {
     uavUVDesc.ViewDimension = D3D11_UAV_DIMENSION_TEXTURE2D;
     uavUVDesc.Texture2D.MipSlice = 0;
 
-    hr = m_device->CreateUnorderedAccessView(pOutputNv12, &uavUVDesc, &m_uavUV);
+    hr = device_->CreateUnorderedAccessView(pOutputNv12, &uavUVDesc, &uavUV_);
     if (FAILED(hr)) throw std::runtime_error("Failed to create UAV for UV plane.");
 
-    m_lastOutputTexture = pOutputNv12;
+    lastOutputTexture_ = pOutputNv12;
 }
 
 // BGRA --> RGBA
-bool WinFrameConverter::Convert(const ConversionParams& params) {
-    if (!m_initialized) return false;
-
-    auto* pInputBgra = static_cast<ID3D11Texture2D*>(params.inputNativeResource.nativeResource);
-    auto* pOutputNv12 = static_cast<ID3D11Texture2D*>(params.outputNativeResource.nativeResource);
-
-    if (!pInputBgra || !pOutputNv12) return false;
-
-    // caching UAVs if same output texture is reused
-    if (m_lastOutputTexture != pOutputNv12) {
-        try {
-            RecreateViewsForOutput(pOutputNv12);
-        }
-        catch (const std::exception& e) {
-            logger().error(QString("[WinFrameConverter Error]: %1").arg(e.what()));
-            return false;
-        }
+bool WinFrameConverter::Convert(const VideoFrame& input, VideoFrame& output)
+{
+    if (!initialized_) {
+        return false;
     }
 
-    // temp SRV for input
+    auto* pInputBgra =
+        static_cast<ID3D11Texture2D*>(input.nativeResource);
+
+    if (!pInputBgra || !outputTexture_) {
+        return false;
+    }
+
+    auto* pOutputNv12 = outputTexture_.Get();
+
+    // input SRV
     D3D11_SHADER_RESOURCE_VIEW_DESC srvDesc{};
     srvDesc.Format = DXGI_FORMAT_B8G8R8A8_UNORM;
     srvDesc.ViewDimension = D3D11_SRV_DIMENSION_TEXTURE2D;
@@ -150,38 +179,61 @@ bool WinFrameConverter::Convert(const ConversionParams& params) {
     srvDesc.Texture2D.MipLevels = 1;
 
     ID3D11ShaderResourceView* inputSRV = nullptr;
-    auto it = m_srvCache.find(pInputBgra);
-    if (it != m_srvCache.end()) {
+
+    auto it = srvCache_.find(pInputBgra);
+
+    if (it != srvCache_.end()) {
         inputSRV = it->second.Get();
     }
     else {
         Microsoft::WRL::ComPtr<ID3D11ShaderResourceView> newSrv;
-        HRESULT hr = m_device->CreateShaderResourceView(pInputBgra, &srvDesc, &newSrv);
-        if (FAILED(hr)) return false;
+
+        HRESULT hr = device_->CreateShaderResourceView(pInputBgra, &srvDesc, &newSrv);
+
+        if (FAILED(hr)) {
+            return false;
+        }
 
         inputSRV = newSrv.Get();
-        m_srvCache[pInputBgra] = newSrv;
+        srvCache_[pInputBgra] = newSrv;
     }
 
-    // bind
-    m_context->CSSetShader(m_computeShader.Get(), nullptr, 0);
+    // bind 
+    context_->CSSetShader(computeShader_.Get(), nullptr, 0);
 
-    ID3D11ShaderResourceView* srvs[] = { inputSRV };
-    m_context->CSSetShaderResources(0, 1, srvs);
+    ID3D11ShaderResourceView* srvs[] = {
+        inputSRV
+    };
 
-    ID3D11UnorderedAccessView* uavs[] = { m_uavY.Get(), m_uavUV.Get() };
-    m_context->CSSetUnorderedAccessViews(0, 2, uavs, nullptr);
+    context_->CSSetShaderResources(0, 1, srvs);
 
-    // dispatch (16x16)
-    UINT dispatchX = (params.outputNativeResource.width + 15) / 16;
-    UINT dispatchY = (params.outputNativeResource.height + 15) / 16;
-    m_context->Dispatch(dispatchX, dispatchY, 1);
+    ID3D11UnorderedAccessView* uavs[] = {
+        uavY_.Get(),
+        uavUV_.Get()
+    };
+
+    context_->CSSetUnorderedAccessViews(0, 2, uavs, nullptr);
+
+    // dispatch
+    const UINT dispatchX = (width_ + 15) / 16;
+    const UINT dispatchY = (height_ + 15) / 16;
+
+    context_->Dispatch(dispatchX, dispatchY, 1);
 
     // unbind
-    ID3D11UnorderedAccessView* nullUAVs[2] = { nullptr, nullptr };
-    ID3D11ShaderResourceView* nullSRVs[1] = { nullptr };
-    m_context->CSSetUnorderedAccessViews(0, 2, nullUAVs, nullptr);
-    m_context->CSSetShaderResources(0, 1, nullSRVs);
+    ID3D11UnorderedAccessView* nullUAVs[] = {
+        nullptr,
+        nullptr
+    };
+
+    ID3D11ShaderResourceView* nullSRVs[] = {
+        nullptr
+    };
+
+    context_->CSSetUnorderedAccessViews(0, 2, nullUAVs, nullptr);
+    context_->CSSetShaderResources(0, 1, nullSRVs);
+
+    output = outputFrame_;
 
     return true;
 }

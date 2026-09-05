@@ -3,12 +3,17 @@
 
 #include <cstdint>
 
-struct LinuxCapturedFrame {
-    const uint8_t* data = nullptr;
+struct LinuxFrame {
+    uint32_t strideY = 0;
+    uint32_t strideU = 0;
+    uint32_t strideV = 0;
+
     uint32_t width = 0;
     uint32_t height = 0;
-    uint32_t stride = 0;
-    uint32_t bytesPerPixel = 4;
+
+    uint8_t* dataY = nullptr;
+    uint8_t* dataU = nullptr;
+    uint8_t* dataV = nullptr;
 };
 
 #endif

@@ -45,7 +45,7 @@ namespace {
         return false;
     }
 
-    Microsoft::WRL::ComPtr<ID3D11Texture2D> createNv12Texture( ID3D11Device* device, uint32_t width, uint32_t height)
+    Microsoft::WRL::ComPtr<ID3D11Texture2D> createNv12Texture(ID3D11Device* device, uint32_t width, uint32_t height)
     {
         if (!device || width == 0 || height == 0) {
             return nullptr;
@@ -148,11 +148,9 @@ void Producer::run(std::atomic<bool>& running)
             continue;
         }
 
-        ConversionParams params{};
-        params.inputNativeResource = bgraFrame;
-        params.outputNativeResource = nv12Frame_;
+        VideoFrame nv12Frame_{};
 
-        if (frameConverter_->Convert(params)) {
+        if (frameConverter_->Convert(bgraFrame, nv12Frame_)) {
             nv12Frame_.timestamp = now100ns();
 
             frameEncoder_->SubmitFrame(nv12Frame_);

@@ -17,26 +17,31 @@ public:
 	WinFrameConverter& operator=(const WinFrameConverter&) = delete;
 
 	bool Initialize(uint32_t width, uint32_t height) override;
-	bool Convert(const ConversionParams& params) override;
+	bool Convert(const VideoFrame& input, VideoFrame& output) override;
 
 private:
 	void CreateComputeShader();
+	void CreateOutputTexture();
 	void RecreateViewsForOutput(ID3D11Texture2D* outputNv12);
 
-	Microsoft::WRL::ComPtr<ID3D11Device> m_device;
-	Microsoft::WRL::ComPtr<ID3D11DeviceContext> m_context;
-	Microsoft::WRL::ComPtr<ID3D11ComputeShader> m_computeShader;
+	Microsoft::WRL::ComPtr<ID3D11Device> device_;
+	Microsoft::WRL::ComPtr<ID3D11DeviceContext> context_;
+	Microsoft::WRL::ComPtr<ID3D11ComputeShader> computeShader_;
 
-	std::unordered_map<ID3D11Texture2D*, Microsoft::WRL::ComPtr<ID3D11ShaderResourceView>> m_srvCache;
+	std::unordered_map<ID3D11Texture2D*, Microsoft::WRL::ComPtr<ID3D11ShaderResourceView>> srvCache_;
+
+	// Converter-owned output.
+	Microsoft::WRL::ComPtr<ID3D11Texture2D> outputTexture_;
+	VideoFrame outputFrame_{};
 
 	// cache views for the current output texture
-	ID3D11Texture2D* m_lastOutputTexture = nullptr;
-	Microsoft::WRL::ComPtr<ID3D11UnorderedAccessView> m_uavY;
-	Microsoft::WRL::ComPtr<ID3D11UnorderedAccessView> m_uavUV;
+	ID3D11Texture2D* lastOutputTexture_ = nullptr;
+	Microsoft::WRL::ComPtr<ID3D11UnorderedAccessView> uavY_;
+	Microsoft::WRL::ComPtr<ID3D11UnorderedAccessView> uavUV_;
 
-	uint32_t m_width = 0;
-	uint32_t m_height = 0;
-	bool m_initialized = false;
+	uint32_t width_ = 0;
+	uint32_t height_ = 0;
+	bool initialized_ = false;
 };
 
 #endif // !WIN_FRAME_CONVERTER_HPP
