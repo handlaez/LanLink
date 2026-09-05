@@ -1,12 +1,10 @@
+#ifndef LNX_FRAME_CONVERTER
+#define LNX_FRAME_CONVERTER
+
 class LinuxFrameConverter : public IFrameConverter {
 public:
-    bool Initialize(uint32_t width, uint32_t height) override
-    {
-        return width > 0 && height > 0;
-    }
-
-    bool ConvertBgraToRgba(const ConversionParams& params) override {
-        params.outputNativeResource = params.inputNativeResource;
-        return true;
-    }
+    bool Initialize(uint32_t width, uint32_t height) override;
+    bool Convert(const ConversionParams& params) override;
 };
+
+#endif

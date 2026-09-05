@@ -44,11 +44,15 @@ if(WIN32)
 else()
     # --- Linux Dependencies (via pkg-config) ---
     find_package(PkgConfig REQUIRED)
+    find_package(X11 REQUIRED)
     
     pkg_check_modules(FFMPEG REQUIRED IMPORTED_TARGET libavcodec libavformat libavutil)
     
     set(FFMPEG_LIBS PkgConfig::FFMPEG)
-    set(PLATFORM_LIBS SDL2::SDL2)
+    set(PLATFORM_LIBS 
+        SDL2::SDL2
+        X11:X11
+    )
 endif()
 
 # --- Common Sources ---
@@ -109,11 +113,16 @@ else()
     set(PLATFORM_SOURCES
         src/platform/linux/LnxPacketReceiver.cpp
         src/platform/linux/LnxPacketSender.cpp
+        src/platform/linux/LnxFrameConverter.cpp
+        src/platform/linux/LnxFrameGrabber.cpp
     )
 
     set(PLATFORM_HEADERS
         src/platform/linux/LnxPacketReceiver.hpp
         src/platform/linux/LnxPacketSender.hpp
+        src/platform/linux/LnxFrameConverter.hpp
+        src/platform/linux/LnxFrameGrabber.hpp
+        src/platform/linux/LnxFrame.hpp
     )
 endif()
 
