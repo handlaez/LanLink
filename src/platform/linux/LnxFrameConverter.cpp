@@ -178,21 +178,41 @@ void FrameConverter::ConvertToYuv420p(const X11Frame& input)
 
 bool FrameConverter::Convert(const VideoFrame& input, VideoFrame& output)
 {
-    if (!initialized_ || !input.nativeResource) {
+    if (!initialized_) {
+        logger().error("LnxFrameConverter: not initialized.");
         return false;
     }
 
-    auto* capturedFrame = static_cast<X11Frame*>(input.nativeResource);
-
-    if (!IsValidInput(*capturedFrame)) {
+    if (!input.nativeResource) {
+        logger().error("LnxFrameConverter: input.nativeResource is null.");
         return false;
     }
 
-    ConvertToYuv420p(*capturedFrame);
+    const auto* x11Frame = static_cast<const X11Frame*>(input.nativeResource);
+
+    if (!x11Frame) {
+        logger().error("LnxFrameConverter: invalid X11Frame.");
+        return false;
+    }
+
+    if (!IsValidInput(*x11Frame)) {
+        logger().error(
+            QString("LnxFrameConverter: invalid input. "
+                "data=%1 width=%2 height=%3 stride=%4 bpp=%5")
+            .arg(reinterpret_cast<quintptr>(x11Frame->data), 0, 16)
+            .arg(x11Frame->width)
+            .arg(x11Frame->height)
+            .arg(x11Frame->stride)
+            .arg(x11Frame->bitsPerPixel));
+
+        return false;
+    }
+
+    ConvertToYuv420p(*x11Frame);
 
     output.nativeResource = &outputFrame_;
-    output.width = outputFrame_.width;
-    output.height = outputFrame_.height;
+    output.width = width_;
+    output.height = height_;
     output.timestamp = input.timestamp;
 
     return true;
