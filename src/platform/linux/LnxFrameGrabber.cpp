@@ -13,6 +13,18 @@ LinuxFrameGrabber::~LinuxFrameGrabber()
     }
 }
 
+bool LinuxFrameGrabber::GetFrameDimensions(uint32_t& outWidth, uint32_t& outHeight) 
+{
+    if (!initialized_) {
+        return false;
+    }
+
+    outWidth = width_;
+    outHeight = height_;
+
+    return true;
+}
+
 bool LinuxFrameGrabber::Initialize()
 {
     if (display_) {

@@ -12,6 +12,7 @@ public:
 	bool Initialize() override;
 	bool CaptureFrame(VideoFrame& outFrame) override;
 	void ReleaseFrame() override;
+	bool GetFrameDimensions(uint32_t& outWidth, uint32_t& outHeight) override;
 
 	ID3D11Device* getDevice() const;
 	ID3D11DeviceContext* getContext() const;

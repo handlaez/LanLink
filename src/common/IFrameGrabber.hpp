@@ -10,6 +10,7 @@ public:
 	virtual bool Initialize() = 0;
 	virtual bool CaptureFrame(VideoFrame& outFrame) = 0;
 	virtual void ReleaseFrame() = 0;
+	virtual bool GetFrameDimensions(uint32_t& outWidth, uint32_t& outHeight) = 0;
 };
 
 #endif // !I_FRAME_GRABBER_HPP

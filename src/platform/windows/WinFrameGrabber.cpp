@@ -100,6 +100,35 @@ bool FrameGrabber::CaptureFrame(VideoFrame& outFrame)
 	return true;
 }
 
+bool FrameGrabber::GetFrameDimensions(uint32_t& outWidth, uint32_t& outHeight)
+{
+	VideoFrame frame{};
+
+	for (int i = 0; i < 20; ++i) {
+		if (CaptureFrame(frame)) {
+			auto* texture = static_cast<ID3D11Texture2D*>(frame.nativeResource);
+
+			if (!texture) {
+				ReleaseFrame();
+				return false;
+			}
+
+			D3D11_TEXTURE2D_DESC desc{};
+			texture->GetDesc(&desc);
+
+			outWidth = desc.Width;
+			outHeight = desc.Height;
+
+			ReleaseFrame();
+			return true;
+		}
+
+		Sleep(4);
+	}
+
+	return false;
+}
+
 void FrameGrabber::ReleaseFrame()
 {
 	acquiredTexture_.Reset();
