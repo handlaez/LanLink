@@ -88,7 +88,6 @@ void Producer::run(std::atomic<bool>& running)
         if (!frameGrabber_.CaptureFrame(capturedFrame)) {
             // giving the grabber some time to grab the frame if no frame is ready yet.
             std::this_thread::sleep_for(std::chrono::milliseconds(2));
-            logger().warn("No frame ready yet!");
             continue;
         }
 
