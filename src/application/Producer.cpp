@@ -88,6 +88,7 @@ void Producer::run(std::atomic<bool>& running)
         if (!frameGrabber_.CaptureFrame(capturedFrame)) {
             // giving the grabber some time to grab the frame if no frame is ready yet.
             std::this_thread::sleep_for(std::chrono::milliseconds(2));
+            logger().warn("No frame ready yet!");
             continue;
         }
 
@@ -98,16 +99,14 @@ void Producer::run(std::atomic<bool>& running)
             logger().error("Failed to convert frame.");
         }
         else {
-
+			
             if (!frameEncoder_->SubmitFrame(convertedFrame)) {
                 logger().error("Failed to submit frame to encoder.");
             }
             else {
-#ifdef _WIN32
                 // temporary synchronization for the asynchronous hardware encoder.
                 // Also limits the submission rate.
                 std::this_thread::sleep_for(std::chrono::milliseconds(8));
-#endif
 
                 while (frameEncoder_->ReceiveFrame(encoded)) {
                     packets.clear();

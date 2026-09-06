@@ -13,6 +13,7 @@
 #undef Unsorted
 
 #include "platform/linux/LnxFrameGrabber.hpp"
+#include "src/application/Logger.hpp"
 
 FrameGrabber::~FrameGrabber()
 {
@@ -67,6 +68,7 @@ bool FrameGrabber::Initialize()
 bool FrameGrabber::CaptureFrame(VideoFrame& frame)
 {
     if (!display_ || !rootWindow_ || frameAcquired_) {
+		logger().error("X11 grabber: invalid display/image state");
         return false;
     }
 
@@ -77,7 +79,7 @@ bool FrameGrabber::CaptureFrame(VideoFrame& frame)
             XDestroyImage(image_);
             image_ = nullptr;
         }
-
+		logger().error("!image_ || !image_->data");
         return false;
     }
 
@@ -88,8 +90,9 @@ bool FrameGrabber::CaptureFrame(VideoFrame& frame)
     capturedFrame_.stride = static_cast<uint32_t>(image_->bytes_per_line);
     capturedFrame_.bitsPerPixel = static_cast<uint32_t>(image_->bits_per_pixel);
 
-    if (capturedFrame_.bitsPerPixel != 4) {
+    if (capturedFrame_.bitsPerPixel != 32) {
         ReleaseFrame();
+        
         return false;
     }
 

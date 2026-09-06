@@ -154,6 +154,7 @@ bool FrameEncoder::Initialize(
 bool FrameEncoder::SubmitFrame(const VideoFrame& input)
 {
     if (!initialized_ || !input.nativeResource) {
+		logger().error("LnxFrameEncoder: not initialized.");
         return false;
     }
 
