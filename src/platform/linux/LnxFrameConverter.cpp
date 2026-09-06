@@ -1,4 +1,5 @@
 #include "LnxFrameConverter.hpp"
+#include "src/application/Logger.hpp"
 
 #include <algorithm>
 #include <cstddef>

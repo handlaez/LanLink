@@ -7,6 +7,10 @@
         "sdl2",
         {
 			"name": "ffmpeg",
+			"platform": "windows"
+		},
+        {
+			"name": "ffmpeg",
 			"features": [
 				"x265"
 			],

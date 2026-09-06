@@ -86,7 +86,7 @@ bool FrameGrabber::CaptureFrame(VideoFrame& frame)
     capturedFrame_.width = width_;
     capturedFrame_.height = height_;
     capturedFrame_.stride = static_cast<uint32_t>(image_->bytes_per_line);
-    capturedFrame_.bitsPerPixel = static_cast<uint32_t>(image_->bits_per_pixel / 8);
+    capturedFrame_.bitsPerPixel = static_cast<uint32_t>(image_->bits_per_pixel);
 
     if (capturedFrame_.bitsPerPixel != 4) {
         ReleaseFrame();
