@@ -28,7 +28,9 @@ int main(int argc, char* argv[])
                 producer.initialize(config.ip, config.port);
                 producer.run(running);
 #else
-                std::cerr << "Producer mode is not yet implemented on Linux. Sorry!\n";
+                Producer producer;
+                producer.initialize(config.ip, config.port);
+                producer.run(running);
 #endif
             }
             else {
