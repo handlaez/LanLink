@@ -29,14 +29,28 @@ bool Producer::initialize(const std::string& address, uint16_t port)
 
     logger().info(QString("Width: %1 Height: %2").arg(width_).arg(height_));
 
+#ifdef _WIN32
+    frameConverter_ = std::make_unique<FrameConverter>(
+        frameGrabber_.getDevice(),
+        frameGrabber_.getContext()
+    );
+#else
     frameConverter_ = std::make_unique<FrameConverter>();
+#endif
 
     if (!frameConverter_->Initialize(width_, height_)) {
         logger().error("Failed to initialize frame converter.");
         return false;
     }
 
+#ifdef _WIN32
+    frameEncoder_ = std::make_unique<FrameEncoder>(
+        frameGrabber_.getDevice(),
+        frameGrabber_.getContext()
+    );
+#else
     frameEncoder_ = std::make_unique<FrameEncoder>();
+#endif
 
     if (!frameEncoder_->Initialize(width_, height_, 60, 8'000'000)) {
         logger().error("Failed to initialize frame encoder.");
