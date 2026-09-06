@@ -3,18 +3,20 @@
 
 #include <cstdint>
 
+extern "C" {
 #include <libavcodec/avcodec.h>
 #include <libavutil/frame.h>
+}
 
 #include "common/IFrameEncoder.hpp"
 
-class LnxFrameEncoder final : public IFrameEncoder {
+class FrameEncoder final : public IFrameEncoder {
 public:
-    LnxFrameEncoder() = default;
-    ~LnxFrameEncoder() override;
+    FrameEncoder() = default;
+    ~FrameEncoder() override;
 
-    LnxFrameEncoder(const LnxFrameEncoder&) = delete;
-    LnxFrameEncoder& operator=(const LnxFrameEncoder&) = delete;
+    FrameEncoder(const FrameEncoder&) = delete;
+    FrameEncoder& operator=(const FrameEncoder&) = delete;
 
     bool Initialize(uint32_t width, uint32_t height, uint32_t fps, uint32_t bitrate) override;
 

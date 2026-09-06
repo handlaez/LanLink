@@ -1,5 +1,5 @@
-#include "Producer.hpp"
 #include "Logger.hpp"
+#include "Producer.hpp"
 
 #include <chrono>
 #include <ratio>
@@ -50,7 +50,7 @@ bool Producer::initialize(const std::string& address, uint16_t port)
         return false;
     }
 
-    logger().info(QString("Streaming at %1:%2").arg(address).arg(port));
+    logger().info(QString("Streaming at %1:%2").arg(QString::fromStdString(address)).arg(port));
 
     return true;
 }

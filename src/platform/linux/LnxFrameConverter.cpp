@@ -25,7 +25,7 @@ namespace {
 
 } // namespace
 
-bool LnxFrameConverter::Initialize(uint32_t width, uint32_t height)
+bool FrameConverter::Initialize(uint32_t width, uint32_t height)
 {
     if (width == 0 || height == 0) {
         return false;
@@ -73,7 +73,7 @@ bool LnxFrameConverter::Initialize(uint32_t width, uint32_t height)
     return true;
 }
 
-bool LnxFrameConverter::IsValidInput(const X11Frame& input) const
+bool FrameConverter::IsValidInput(const X11Frame& input) const
 {
     if (!input.data) {
         return false;
@@ -96,7 +96,7 @@ bool LnxFrameConverter::IsValidInput(const X11Frame& input) const
     return true;
 }
 
-void LnxFrameConverter::ConvertPixel(const X11Frame& input, uint32_t x, uint32_t y, uint8_t& red, uint8_t& green, uint8_t& blue) const
+void FrameConverter::ConvertPixel(const X11Frame& input, uint32_t x, uint32_t y, uint8_t& red, uint8_t& green, uint8_t& blue) const
 {
     const uint8_t* row = input.data + static_cast<std::size_t>(y) * input.stride;
 
@@ -124,7 +124,7 @@ void LnxFrameConverter::ConvertPixel(const X11Frame& input, uint32_t x, uint32_t
     red = pixel[2];
 }
 
-void LnxFrameConverter::ConvertToYuv420p(const X11Frame& input)
+void FrameConverter::ConvertToYuv420p(const X11Frame& input)
 {
     const uint32_t chromaWidth = (width_ + 1) / 2;
     const uint32_t chromaHeight = (height_ + 1) / 2;
@@ -176,7 +176,7 @@ void LnxFrameConverter::ConvertToYuv420p(const X11Frame& input)
     }
 }
 
-bool LnxFrameConverter::Convert(const VideoFrame& input, VideoFrame& output)
+bool FrameConverter::Convert(const VideoFrame& input, VideoFrame& output)
 {
     if (!initialized_ || !input.nativeResource) {
         return false;

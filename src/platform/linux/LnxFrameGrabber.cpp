@@ -1,9 +1,20 @@
-#include "LnxFrameGrabber.hpp"
-
 #include <cstring>
 #include <X11/Xutil.h>
+#undef Bool
+#undef CursorShape
+#undef Expose
+#undef KeyPress
+#undef KeyRelease
+#undef FocusIn
+#undef FocusOut
+#undef FontChange
+#undef None
+#undef Status
+#undef Unsorted
 
-LinuxFrameGrabber::~LinuxFrameGrabber()
+#include "platform/linux/LnxFrameGrabber.hpp"
+
+FrameGrabber::~FrameGrabber()
 {
     ReleaseFrame();
 
@@ -13,7 +24,7 @@ LinuxFrameGrabber::~LinuxFrameGrabber()
     }
 }
 
-bool LinuxFrameGrabber::GetFrameDimensions(uint32_t& outWidth, uint32_t& outHeight) 
+bool FrameGrabber::GetFrameDimensions(uint32_t& outWidth, uint32_t& outHeight) 
 {
     if (!initialized_) {
         return false;
@@ -25,7 +36,7 @@ bool LinuxFrameGrabber::GetFrameDimensions(uint32_t& outWidth, uint32_t& outHeig
     return true;
 }
 
-bool LinuxFrameGrabber::Initialize()
+bool FrameGrabber::Initialize()
 {
     if (display_) {
         return true;
@@ -46,13 +57,14 @@ bool LinuxFrameGrabber::Initialize()
         return false;
     }
 
+	initialized_ = true;
     width_ = static_cast<uint32_t>(attributes.width);
     height_ = static_cast<uint32_t>(attributes.height);
 
     return width_ > 0 && height_ > 0;
 }
 
-bool LinuxFrameGrabber::CaptureFrame(VideoFrame& frame)
+bool FrameGrabber::CaptureFrame(VideoFrame& frame)
 {
     if (!display_ || !rootWindow_ || frameAcquired_) {
         return false;
@@ -74,9 +86,9 @@ bool LinuxFrameGrabber::CaptureFrame(VideoFrame& frame)
     capturedFrame_.width = width_;
     capturedFrame_.height = height_;
     capturedFrame_.stride = static_cast<uint32_t>(image_->bytes_per_line);
-    capturedFrame_.bytesPerPixel = static_cast<uint32_t>(image_->bits_per_pixel / 8);
+    capturedFrame_.bitsPerPixel = static_cast<uint32_t>(image_->bits_per_pixel / 8);
 
-    if (capturedFrame_.bytesPerPixel != 4) {
+    if (capturedFrame_.bitsPerPixel != 4) {
         ReleaseFrame();
         return false;
     }
@@ -90,7 +102,7 @@ bool LinuxFrameGrabber::CaptureFrame(VideoFrame& frame)
     return true;
 }
 
-void LinuxFrameGrabber::ReleaseFrame()
+void FrameGrabber::ReleaseFrame()
 {
     if (image_) {
         XDestroyImage(image_);
@@ -101,12 +113,12 @@ void LinuxFrameGrabber::ReleaseFrame()
     frameAcquired_ = false;
 }
 
-uint32_t LinuxFrameGrabber::width() const noexcept
+uint32_t FrameGrabber::width() const noexcept
 {
     return width_;
 }
 
-uint32_t LinuxFrameGrabber::height() const noexcept
+uint32_t FrameGrabber::height() const noexcept
 {
     return height_;
 }

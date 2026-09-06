@@ -8,13 +8,13 @@
 #include "platform/linux/X11Frame.hpp"
 #include "platform/linux/YUVFrame.hpp"
 
-class LnxFrameConverter final : public IFrameConverter {
+class FrameConverter final : public IFrameConverter {
 public:
-    LnxFrameConverter() = default;
-    ~LnxFrameConverter() override = default;
+    FrameConverter() = default;
+    ~FrameConverter() override = default;
 
-    LnxFrameConverter(const LnxFrameConverter&) = delete;
-    LnxFrameConverter& operator=(const LnxFrameConverter&) = delete;
+    FrameConverter(const FrameConverter&) = delete;
+    FrameConverter& operator=(const FrameConverter&) = delete;
 
     bool Initialize(uint32_t width, uint32_t height) override;
     bool Convert(const VideoFrame& input, VideoFrame& output) override;

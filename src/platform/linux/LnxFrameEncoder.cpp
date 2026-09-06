@@ -3,9 +3,11 @@
 #include <algorithm>
 #include <cstring>
 
+extern "C" {
 #include <libavutil/error.h>
 #include <libavutil/opt.h>
 #include <libavutil/pixfmt.h>
+}
 
 #include "Logger.hpp"
 #include "platform/linux/YUVFrame.hpp"
@@ -21,12 +23,12 @@ namespace {
 
 } // namespace
 
-LnxFrameEncoder::~LnxFrameEncoder()
+FrameEncoder::~FrameEncoder()
 {
     Shutdown();
 }
 
-void LnxFrameEncoder::Shutdown()
+void FrameEncoder::Shutdown()
 {
     if (codecContext_) {
         avcodec_free_context(&codecContext_);
@@ -48,7 +50,7 @@ void LnxFrameEncoder::Shutdown()
     nextPts_ = 0;
 }
 
-bool LnxFrameEncoder::Initialize(
+bool FrameEncoder::Initialize(
     uint32_t width,
     uint32_t height,
     uint32_t fps,
@@ -149,7 +151,7 @@ bool LnxFrameEncoder::Initialize(
     return true;
 }
 
-bool LnxFrameEncoder::SubmitFrame(const VideoFrame& input)
+bool FrameEncoder::SubmitFrame(const VideoFrame& input)
 {
     if (!initialized_ || !input.nativeResource) {
         return false;
@@ -196,7 +198,7 @@ bool LnxFrameEncoder::SubmitFrame(const VideoFrame& input)
     return true;
 }
 
-bool LnxFrameEncoder::ReceiveFrame(EncodedFrame& output)
+bool FrameEncoder::ReceiveFrame(EncodedFrame& output)
 {
     if (!initialized_) {
         return false;

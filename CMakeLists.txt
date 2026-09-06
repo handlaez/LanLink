@@ -51,7 +51,7 @@ else()
     set(FFMPEG_LIBS PkgConfig::FFMPEG)
     set(PLATFORM_LIBS 
         SDL2::SDL2
-        X11:X11
+        X11::X11
     )
 endif()
 
@@ -67,6 +67,7 @@ set(COMMON_SOURCES
     src/common/UnifiedFrameDecoder.cpp
     src/common/UnifiedFrameRenderer.cpp
     src/application/Consumer.cpp
+    src/application/Producer.cpp
 )
 
 set(COMMON_HEADERS
@@ -88,6 +89,7 @@ set(COMMON_HEADERS
     src/common/UnifiedFrameDecoder.hpp
     src/common/UnifiedFrameRenderer.hpp
     src/application/Consumer.hpp
+    src/application/Producer.hpp
 )
 
 # --- Platform Specific Configurations ---
@@ -97,7 +99,6 @@ if(WIN32)
         src/platform/windows/WinFrameConverter.cpp
         src/platform/windows/WinFrameEncoder.cpp
         src/platform/windows/WinPacketSender.cpp
-        src/application/Producer.cpp
         src/platform/windows/WinPacketReceiver.cpp
     )
 
@@ -106,7 +107,6 @@ if(WIN32)
         src/platform/windows/WinFrameConverter.hpp
         src/platform/windows/WinFrameEncoder.hpp
         src/platform/windows/WinPacketSender.hpp
-        src/application/Producer.hpp
         src/platform/windows/WinPacketReceiver.hpp
     )
 else()

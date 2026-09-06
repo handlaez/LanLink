@@ -9,9 +9,7 @@
 
 #include "src/application/Consumer.hpp"
 #include "src/application/UnifiedArgParser.hpp"
-#ifdef _WIN32
 #include "src/application/Producer.hpp"
-#endif
 
 int main(int argc, char* argv[])
 {

@@ -7,9 +7,7 @@
 #include <qqmlintegration.h>
 #include <atomic>
 
-#ifdef _WIN32
 #include "Producer.hpp"
-#endif
 #include "Consumer.hpp"
 
 enum class Mode {
