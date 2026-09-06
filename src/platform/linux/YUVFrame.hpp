@@ -1,9 +1,9 @@
-#ifndef LNX_FRAME_HPP
-#define LNX_FRAME_HPP
+#ifndef YUV_FRAME_HPP
+#define YUV_FRAME_HPP
 
 #include <cstdint>
 
-struct LinuxFrame {
+struct YUVFrame {
     uint32_t strideY = 0;
     uint32_t strideU = 0;
     uint32_t strideV = 0;

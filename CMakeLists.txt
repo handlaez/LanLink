@@ -123,7 +123,8 @@ else()
         src/platform/linux/LnxPacketSender.hpp
         src/platform/linux/LnxFrameConverter.hpp
         src/platform/linux/LnxFrameGrabber.hpp
-        src/platform/linux/LnxFrame.hpp
+        src/platform/linux/YUVFrame.hpp
+        src/platform/linux/X11Frame.hpp
         src/platform/linux/LnxFrameEncoder.hpp
     )
 endif()
